@@ -155,17 +155,6 @@ button {
  * Shared primitives
  * ----------------------------------------------------------------------- */
 
-.surface {
-  background-color: color-mix(in oklab, var(--card) 60%, transparent);
-  border: 1px solid color-mix(in oklab, var(--border) 45%, transparent);
-  border-radius: var(--radius-lg);
-}
-
-.hairline {
-  background-color: color-mix(in oklab, var(--border) 100%, transparent);
-  height: 1px;
-}
-
 .label-2xs {
   font-size: var(--text-2xs);
   line-height: var(--text-2xs-lh);

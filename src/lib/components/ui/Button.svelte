@@ -1,6 +1,6 @@
 <script lang="ts" module>
   export type ButtonVariant = 'default' | 'outline' | 'ghost' | 'ghost-muted';
-  export type ButtonSize = 'xs' | 'sm' | 'default' | 'icon-xs' | 'icon-sm' | 'icon';
+  export type ButtonSize = 'xs' | 'sm' | 'default' | 'icon-sm';
 </script>
 
 <script lang="ts">
@@ -106,25 +106,11 @@
     line-height: var(--text-sm-lh);
   }
 
-  .btn[data-size='icon-xs'] {
-    width: 1.375rem;
-    height: 1.375rem;
-    padding: 0;
-    font-size: var(--text-2xs);
-  }
-
   .btn[data-size='icon-sm'] {
     width: 1.75rem;
     height: 1.75rem;
     padding: 0;
     font-size: var(--text-xs);
-  }
-
-  .btn[data-size='icon'] {
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-    font-size: var(--text-sm);
   }
 
   .btn[data-variant='default'] {
