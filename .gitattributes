@@ -1,0 +1,7 @@
+# The repo is a web project and the generators write LF, so normalise
+# everything to LF. Without this, git checks the files out with CRLF on
+# Windows and every regenerated asset shows up as a diff.
+* text=auto eol=lf
+
+*.png binary
+*.woff2 binary
