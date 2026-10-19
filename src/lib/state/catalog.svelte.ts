@@ -7,7 +7,7 @@ class CatalogState {
 	readonly categories = searchIndex.categories
 
 	query = $state("")
-	category = $state<CategoryId | "all" | "popular">("all")
+	category = $state<CategoryId | "all" | "popular" | "recent">("all")
 
 	total = $derived(this.entries.length)
 
@@ -25,9 +25,11 @@ class CatalogState {
 	)
 
 	outcome = $derived(() => {
-		// "Popular" is not a real category, the app fills those hits itself.
-		if (this.category === "all") return this.all()
-		if (this.category === "popular") return this.all()
+		// "Popular" and "Recent" are not real categories, the app fills those
+		// hits itself from the usage counter.
+		if (this.category === "all" || this.category === "popular" || this.category === "recent") {
+			return this.all()
+		}
 
 		return searchIcons({
 			query: this.query,

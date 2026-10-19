@@ -7,6 +7,8 @@ import {
 	MemoryUsageStorage,
 	postCounts,
 	rankCounts,
+	RECENT_LIMIT,
+	RecentBuffer,
 	UsageCounter,
 } from '../src/lib/core/usage.ts';
 
@@ -70,6 +72,44 @@ describe('usage counter', () => {
 
     assert.equal(counter.total, 0);
     assert.deepEqual(counter.popular(), []);
+  });
+});
+
+describe('recent buffer', () => {
+  it('keeps the most recent copies first', () => {
+    const buffer = new RecentBuffer(new MemoryUsageStorage());
+
+    buffer.push('accept');
+    buffer.push('zoom');
+    buffer.push('folder');
+
+    assert.deepEqual(buffer.list(), ['folder', 'zoom', 'accept']);
+  });
+
+  it('deduplicates', () => {
+    const buffer = new RecentBuffer(new MemoryUsageStorage());
+
+    buffer.push('accept');
+    buffer.push('zoom');
+    buffer.push('accept');
+
+    assert.deepEqual(buffer.list(), ['accept', 'zoom']);
+  });
+
+  it('caps at fifty entries', () => {
+    const buffer = new RecentBuffer(new MemoryUsageStorage());
+
+    for (let index = 0; index < 80; index += 1) buffer.push(`icon_${index}`);
+
+    assert.equal(buffer.list().length, RECENT_LIMIT);
+    assert.equal(buffer.list()[0], 'icon_79');
+  });
+
+  it('survives a reload and stays local', () => {
+    const storage = new MemoryUsageStorage();
+    new RecentBuffer(storage).push('accept');
+
+    assert.deepEqual(new RecentBuffer(storage).list(), ['accept']);
   });
 });
 

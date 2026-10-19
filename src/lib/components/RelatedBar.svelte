@@ -82,13 +82,18 @@
 
 <style>
 	.related-bar {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		z-index: 20;
 		display: flex;
 		flex: none;
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.5rem 0.75rem;
 		border-top: 1px solid color-mix(in oklab, var(--border) 45%, transparent);
-		background-color: color-mix(in oklab, var(--card) 62%, transparent);
+		background-color: color-mix(in oklab, var(--card) 55%, transparent);
 		animation: silk-fade-in 160ms var(--ease);
 	}
 

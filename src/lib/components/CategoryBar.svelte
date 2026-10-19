@@ -4,17 +4,32 @@
 
 	const SCROLL_STEP = 240
 
+	export interface Facet {
+		/** How many of them match the current query. */
+		matched: number
+		/** How many there are in total. */
+		total: number
+	}
+
 	interface Props {
 		categories: readonly CategoryMeta[]
 		counts: Readonly<Record<CategoryId, number>>
 		total: number
-		value: CategoryId | "all" | "popular"
-		/** Number of icons in the global popularity ranking, 0 when there is none. */
-		popular: number
-		onchange: (value: CategoryId | "all" | "popular") => void
+		value: CategoryId | "all" | "popular" | "recent"
+		popular: Facet
+		recent: Facet
+		onchange: (value: CategoryId | "all" | "popular" | "recent") => void
 	}
 
-	let { categories, counts, total, value, popular, onchange }: Props = $props()
+	let {
+		categories,
+		counts,
+		total,
+		value,
+		popular,
+		recent,
+		onchange,
+	}: Props = $props()
 
 	let scroller = $state<HTMLElement | null>(null)
 
@@ -92,18 +107,35 @@
 			<span class="count">{total}</span>
 		</button>
 
-		{#if popular > 0}
+		{#if popular.total > 0}
 			<button
 				type="button"
-				class="chip popular"
+				class="chip"
 				class:glass={value === "popular"}
 				data-active={value === "popular"}
+				data-empty={popular.matched === 0}
 				aria-pressed={value === "popular"}
 				title="The icons everyone copies the most"
 				onclick={() => onchange("popular")}
 			>
 				Popular
-				<span class="count">{popular}</span>
+				<span class="count">{popular.matched}</span>
+			</button>
+		{/if}
+
+		{#if recent.total > 0}
+			<button
+				type="button"
+				class="chip"
+				class:glass={value === "recent"}
+				data-active={value === "recent"}
+				data-empty={recent.matched === 0}
+				aria-pressed={value === "recent"}
+				title="What you copied last, on this machine"
+				onclick={() => onchange("recent")}
+			>
+				Recent
+				<span class="count">{recent.matched}</span>
 			</button>
 		{/if}
 
@@ -212,11 +244,6 @@
 		background-color: color-mix(in oklab, var(--foreground) 9%, transparent);
 		color: var(--foreground);
 	}
-	.chip.popular .count {
-		background-color: color-mix(in oklab, var(--primary) 30%, transparent);
-		color: color-mix(in oklab, var(--primary) 85%, var(--foreground));
-	}
-
 	/* A category with no results for the current query recedes. */
 	.chip[data-empty="true"] {
 		opacity: 0.4;

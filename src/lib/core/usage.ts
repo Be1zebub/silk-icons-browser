@@ -7,8 +7,6 @@
  *
  * Sending them somewhere is the job of the reactive wrapper, which batches
  * the copies and posts them in one request.
- *
- * `popular()` is the hook for the "Popular" category.
  */
 
 const STORAGE_KEY = "silk.usage.v1"
@@ -16,49 +14,41 @@ const STORAGE_KEY = "silk.usage.v1"
 /** Cap the stored map so a long session cannot grow it without bound. */
 const MAX_TRACKED = 512
 
+/** How many recently copied icons are remembered. */
+export const RECENT_LIMIT = 50
+
 export interface UsageStorage {
-	read(): Record<string, number>
-	write(counts: Record<string, number>): void
+	get<T>(key: string): T | undefined
+	set<T>(key: string, value: T): void
 }
 
 /** In-memory fallback for private mode and other blocked storage. */
 export class MemoryUsageStorage implements UsageStorage {
-	#counts: Record<string, number> = {}
+	#values = new Map<string, unknown>()
 
-	read(): Record<string, number> {
-		return { ...this.#counts }
+	get<T>(key: string): T | undefined {
+		return this.#values.get(key) as T | undefined
 	}
 
-	write(counts: Record<string, number>): void {
-		this.#counts = { ...counts }
+	set<T>(key: string, value: T): void {
+		this.#values.set(key, value)
 	}
 }
 
 export class LocalUsageStorage implements UsageStorage {
-	read(): Record<string, number> {
+	get<T>(key: string): T | undefined {
 		try {
-			const raw = localStorage.getItem(STORAGE_KEY)
-			if (!raw) return {}
-
-			const parsed: unknown = JSON.parse(raw)
-			if (typeof parsed !== "object" || parsed === null) return {}
-
-			const counts: Record<string, number> = {}
-			for (const [name, count] of Object.entries(parsed as Record<string, unknown>)) {
-				if (typeof count === "number" && Number.isFinite(count) && count > 0) {
-					counts[name] = Math.floor(count)
-				}
-			}
-
-			return counts
+			const raw = localStorage.getItem(`${STORAGE_KEY}:${key}`)
+			if (!raw) return undefined
+			return JSON.parse(raw) as T
 		} catch {
-			return {}
+			return undefined
 		}
 	}
 
-	write(counts: Record<string, number>): void {
+	set<T>(key: string, value: T): void {
 		try {
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(counts))
+			localStorage.setItem(`${STORAGE_KEY}:${key}`, JSON.stringify(value))
 		} catch {
 			// Quota or privacy mode: the counter stays in memory.
 		}
@@ -71,7 +61,7 @@ export class UsageCounter {
 
 	constructor(storage: UsageStorage) {
 		this.#storage = storage
-		this.#counts = storage.read()
+		this.#counts = storage.get<Record<string, number>>("counts") ?? {}
 	}
 
 	record(name: string): void {
@@ -86,7 +76,7 @@ export class UsageCounter {
 			for (const tracked of overflow) delete this.#counts[tracked]
 		}
 
-		this.#storage.write(this.#counts)
+		this.#storage.set("counts", this.#counts)
 	}
 
 	countOf(name: string): number {
@@ -108,7 +98,38 @@ export class UsageCounter {
 
 	reset(): void {
 		this.#counts = {}
-		this.#storage.write(this.#counts)
+		this.#storage.set("counts", this.#counts)
+	}
+}
+
+/**
+ * The last icons that were copied on this machine, most recent first. Local
+ * only: it never leaves the browser, the global counter knows nothing about it.
+ */
+export class RecentBuffer {
+	#names: string[]
+	#storage: UsageStorage
+	#limit: number
+
+	constructor(storage: UsageStorage, limit = RECENT_LIMIT) {
+		this.#storage = storage
+		this.#limit = limit
+		this.#names = storage.get<string[]>("recent") ?? []
+	}
+
+	push(name: string): void {
+		this.#names = [name, ...this.#names.filter((item) => item !== name)].slice(0, this.#limit)
+		this.#storage.set("recent", this.#names)
+	}
+
+	/** The most recently copied icons, most recent first. */
+	list(): string[] {
+		return [...this.#names]
+	}
+
+	clear(): void {
+		this.#names = []
+		this.#storage.set("recent", this.#names)
 	}
 }
 

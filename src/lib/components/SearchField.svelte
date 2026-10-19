@@ -39,7 +39,7 @@
 	}
 </script>
 
-<div class="field glass" data-active={hasQuery}>
+<div class="field glass-strong" data-active={hasQuery}>
 	<span class="lead" aria-hidden="true"><Search size={15} /></span>
 
 	<input
@@ -90,7 +90,7 @@
 		height: 2.25rem;
 		border: 1px solid color-mix(in oklab, var(--border) 14%, transparent);
 		border-radius: var(--radius-lg);
-		background-color: color-mix(in oklab, var(--card) 52%, transparent);
+		background-color: color-mix(in oklab, var(--card) 62%, transparent);
 		transition:
 			border-color var(--duration) var(--ease),
 			background-color var(--duration) var(--ease),
@@ -103,8 +103,10 @@
 
 	.field:focus-within {
 		border-color: color-mix(in oklab, var(--primary) 55%, transparent);
-		background-color: color-mix(in oklab, var(--card) 62%, transparent);
-		box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent);
+		background-color: color-mix(in oklab, var(--card) 72%, transparent);
+		box-shadow:
+			0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent),
+			inset 0 1px 0 rgba(255, 255, 255, 0.055);
 	}
 
 	.lead {

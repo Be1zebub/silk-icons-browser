@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Monitor, Moon, Star, Sun } from "@lucide/svelte"
+	import { Monitor, Moon, Sun } from "@lucide/svelte"
 
 	import CategoryBar from "./lib/components/CategoryBar.svelte"
 	import EmptyState from "./lib/components/EmptyState.svelte"
@@ -75,25 +75,8 @@
 	)
 	const hasQuery = $derived(catalogState.query.trim().length > 0)
 
-	/** The results, with the pinned related icon in front. */
-	const displayHits = $derived.by<readonly SearchHit[]>(() => {
-		if (catalogState.category === "popular") return popularHits
-		if (!pinned) return catalogState.hits
-		return [
-			{
-				icon: pinned,
-				score: 0,
-				ranges: [],
-				matchedTokens: 0,
-				coverage: 0,
-			},
-			...catalogState.hits,
-		]
-	})
-
-	/** The icons everyone copies the most. */
-	const popularHits = $derived.by<readonly SearchHit[]>(() => {
-		const names = usage.popularIcons
+	/** Turns a list of icon names into hits, keeping the given order. */
+	const hitsFrom = (names: readonly string[]): SearchHit[] => {
 		const hits: SearchHit[] = []
 
 		for (const name of names) {
@@ -103,6 +86,49 @@
 		}
 
 		return hits
+	}
+
+	/**
+	 * The icons everyone copies the most. With a query the ranking follows the
+	 * search, without one it follows the popularity.
+	 */
+	const popularHits = $derived.by<readonly SearchHit[]>(() => {
+		const names = usage.popularIcons
+		if (!hasQuery) return hitsFrom(names)
+
+		const allowed = new Set(names)
+		return catalogState.hits.filter((hit) => allowed.has(hit.icon.name))
+	})
+
+	/** The icons copied on this machine, most recent first. Local only. */
+	const recentHits = $derived.by<readonly SearchHit[]>(() => {
+		const names = usage.recent()
+		if (!hasQuery) return hitsFrom(names)
+
+		const allowed = new Set(names)
+		return catalogState.hits.filter((hit) => allowed.has(hit.icon.name))
+	})
+
+	/** The results of the current category, before the pinned icon. */
+	const baseHits = $derived.by<readonly SearchHit[]>(() => {
+		if (catalogState.category === "popular") return popularHits
+		if (catalogState.category === "recent") return recentHits
+		return catalogState.hits
+	})
+
+	/** The results, with the pinned related icon in front. */
+	const displayHits = $derived.by<readonly SearchHit[]>(() => {
+		if (!pinned) return baseHits
+		return [
+			{
+				icon: pinned,
+				score: 0,
+				ranges: [],
+				matchedTokens: 0,
+				coverage: 0,
+			},
+			...baseHits,
+		]
 	})
 
 	// Theme + URL bootstrap.
@@ -255,7 +281,7 @@
 	function selectRelated(name: string): void {
 		// A related icon that is not in the current results becomes a
 		// temporary first result, so clicking it actually shows something.
-		const inResults = catalogState.hits.some((hit) => hit.icon.name === name)
+		const inResults = baseHits.some((hit) => hit.icon.name === name)
 		pinned = inResults
 			? null
 			: (catalogState.entries.find((entry) => entry.name === name) ?? null)
@@ -345,16 +371,25 @@
 			</Button>
 
 			<Button
-			variant="ghost"
-			size="icon-sm"
-			label="Star on github"
-			hideLabel
-			href="https://github.com/Be1zebub/silk-icons-browser"
-			target="_blank"
-			rel="noreferrer"
-		>
-			<Star size={14} fill="currentColor" />
-		</Button>
+				variant="ghost"
+				size="icon-sm"
+				label="Star on github"
+				hideLabel
+				href="https://github.com/Be1zebub/silk-icons-browser"
+				target="_blank"
+				rel="noreferrer"
+			>
+				<svg
+				class="github-mark"
+				viewBox="0 0 24 24"
+				width="16"
+				height="16"
+				fill="currentColor"
+				aria-hidden="true"
+			>
+				<path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.017-1.64-3.2 1.555-3.2 1.555-2.205-.284-1.736-2.61-2.005-3.65 3.368-4.267 1.116-4.267 4.267 0 3.351 1.116 3.68 1.11 4.74 2.005 0 3.6.82 6.29 1.11 9.399 4.265 0 3.74-1.089 6.185-2.23 0 1.45-.195 2.985-1.135 3.75-.45 0-2.075-.1-3.85-1.105-5.06 2.83-6.085 5.21 0 4.215-1.28 8.095-2.06 0-2.22 0-1.245.315-1.95 1.575 4.275 0 3.375 1.05 4.045 0 1.635-.15 1.65-.15 1.65 0 1.925.1 4.095 1.575.15 1.65z" />
+			</svg>
+			</Button>
 		</div>
 	</header>
 
@@ -364,8 +399,9 @@
 			counts={catalogState.counts}
 			total={catalogState.matched}
 			value={catalogState.category}
-			popular={popularHits.length}
-			onchange={(value: CategoryId | "all" | "popular") => {
+			popular={{ matched: popularHits.length, total: usage.popularIcons.length }}
+			recent={{ matched: recentHits.length, total: usage.recent().length }}
+			onchange={(value: CategoryId | "all" | "popular" | "recent") => {
 				catalogState.category = value
 			}}
 		/>
@@ -374,9 +410,7 @@
 	<main class="results">
 		<div class="statusbar">
 			<p class="status">
-				{#if catalogState.category === "popular"}
-					<strong>{displayHits.length.toLocaleString("en-US")}</strong> most copied
-				{:else if hasQuery}
+				{#if hasQuery}
 					<strong>{displayHits.length.toLocaleString("en-US")}</strong>
 					result{displayHits.length === 1 ? "" : "s"}
 					<span class="dot">·</span>
@@ -389,9 +423,9 @@
 			</p>
 
 			<p class="hints">
-				<Kbd keys="/" /> search <span class="dot">·</span>
-				<Kbd keys="↑↓" /> browse <span class="dot">·</span>
-				<Kbd keys="⏎" /> copy <span class="dot">·</span>
+				<span><Kbd keys="/" /> search</span>
+				<span><Kbd keys="↑↓" /> browse</span>
+				<span><Kbd keys="⏎" /> copy</span>
 			</p>
 		</div>
 
@@ -439,6 +473,7 @@
 		gap: 1rem;
 		height: 3.5rem;
 		padding: 0 1rem;
+		margin-top: 1rem;
 		border-bottom: 1px solid color-mix(in oklab, var(--border) 45%, transparent);
 	}
 
@@ -486,6 +521,7 @@
 	}
 
 	.results {
+		position: relative;
 		display: flex;
 		min-width: 0;
 		min-height: 0;
@@ -522,6 +558,7 @@
 
 	.hints {
 		display: flex;
+		gap: 0.6rem;
 		align-items: center;
 		margin: 0;
 		font-size: var(--text-2xs);

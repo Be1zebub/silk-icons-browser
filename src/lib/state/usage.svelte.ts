@@ -1,5 +1,6 @@
 import {
 	LocalUsageStorage,
+	RecentBuffer,
 	UsageCounter,
 	fetchGlobalCounts,
 	postCounts,
@@ -19,11 +20,19 @@ const ENDPOINT =
 /** How often the pending copies are flushed to the server. */
 const SYNC_INTERVAL = 30_000
 
-/** How many icons the ranking keeps. */
+/** How many icons the global ranking keeps. */
 const GLOBAL_LIMIT = 64
 
 function createStorage(): UsageStorage {
 	if (typeof localStorage === "undefined") return new LocalUsageStorage()
+
+	// The counters used to live in one flat key. Drop it, it is dead weight.
+	try {
+		localStorage.removeItem("silk.usage.v1")
+	} catch {
+		// Storage is unavailable, nothing to clean up.
+	}
+
 	return new LocalUsageStorage()
 }
 
@@ -33,6 +42,7 @@ function createStorage(): UsageStorage {
  */
 class UsageState {
 	#counter = new UsageCounter(createStorage())
+	#recent = new RecentBuffer(createStorage())
 	/** Bumped on every write so the derived values refresh. */
 	#version = $state(0)
 	/** Copies made since the last flush. */
@@ -43,6 +53,7 @@ class UsageState {
 
 	recordCopy(name: string): void {
 		this.#counter.record(name)
+		this.#recent.push(name)
 		this.#pending.set(name, (this.#pending.get(name) ?? 0) + 1)
 		this.#version += 1
 	}
@@ -56,6 +67,12 @@ class UsageState {
 	popular(limit = 24): string[] {
 		this.#version
 		return this.#counter.popular(limit)
+	}
+
+	/** The icons copied on this machine, most recent first. Local only. */
+	recent(): string[] {
+		this.#version
+		return this.#recent.list()
 	}
 
 	/**

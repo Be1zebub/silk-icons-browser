@@ -218,7 +218,8 @@
 		min-height: 0;
 		flex: 1;
 		overflow-y: auto;
-		padding: 0.5rem 1rem 1.5rem;
+		/* Room for the related strip, which floats over the grid. */
+		padding: 0.5rem 1rem 3.75rem;
 		scroll-padding-block: 1rem;
 	}
 
