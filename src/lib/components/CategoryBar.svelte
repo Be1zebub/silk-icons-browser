@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Glyph from './Glyph.svelte';
+  import { ChevronLeft, ChevronRight } from '@lucide/svelte';
   import type { CategoryId, CategoryMeta } from '../core/types';
 
   const SCROLL_STEP = 240;
@@ -63,7 +63,7 @@
       title="Scroll left"
       onclick={() => scrollBy(-1)}
     >
-      <Glyph name="chevron-left" size={13} />
+      <ChevronLeft size={13} />
     </button>
   {/if}
 
@@ -108,7 +108,7 @@
       title="Scroll right"
       onclick={() => scrollBy(1)}
     >
-      <Glyph name="chevron-right" size={13} />
+      <ChevronRight size={13} />
     </button>
   {/if}
 </div>

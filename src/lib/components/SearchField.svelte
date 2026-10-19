@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Glyph from './Glyph.svelte';
+  import { Search, X } from '@lucide/svelte';
   import Kbd from './ui/Kbd.svelte';
 
   interface Props {
@@ -33,7 +33,7 @@
 </script>
 
 <div class="field" data-active={hasQuery}>
-  <span class="lead" aria-hidden="true"><Glyph name="search" size={15} /></span>
+  <span class="lead" aria-hidden="true"><Search size={15} /></span>
 
   <input
     bind:this={input}
@@ -55,7 +55,7 @@
       {#if fuzzy && resultCount > 0}<span class="fuzzy-dot" title="Few matches — fuzzy results shown"></span>{/if}
     </span>
     <button type="button" class="action" aria-label="Clear search" title="Clear search" onclick={onclear}>
-      <Glyph name="close" size={13} />
+      <X size={13} />
     </button>
   {:else}
     <span class="hint" aria-hidden="true"><Kbd keys="/" /></span>

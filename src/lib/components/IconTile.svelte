@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Check } from '@lucide/svelte';
   import HighlightName from './HighlightName.svelte';
   import type { Range } from '../core/types';
 
@@ -42,7 +43,7 @@
 >
   <span class="glyph">
     <i class="silk {name}"></i>
-    {#if copied}<span class="check" aria-hidden="true"></span>{/if}
+    {#if copied}<span class="check" aria-hidden="true"><Check size={11} strokeWidth={3} /></span>{/if}
   </span>
   <span class="name"><HighlightName text={name} {ranges} /></span>
 </button>
@@ -102,20 +103,16 @@
     position: absolute;
     right: 0;
     bottom: 0;
+    display: inline-flex;
     width: 0.875rem;
     height: 0.875rem;
+    align-items: center;
+    justify-content: center;
     border-radius: 999px;
     background-color: var(--success);
+    color: var(--background);
     box-shadow: 0 0 0 2px var(--background);
     animation: silk-pop 180ms var(--ease);
-  }
-
-  .check::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: no-repeat center/0.5625rem
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23000' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.5 8.5 6.5 11.5 12.5 4.5'/%3E%3C/svg%3E");
   }
 
   .name {

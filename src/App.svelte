@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Monitor, Moon, Sun } from '@lucide/svelte';
+
   import SearchField from './lib/components/SearchField.svelte';
   import CategoryBar from './lib/components/CategoryBar.svelte';
   import IconGrid from './lib/components/IconGrid.svelte';
@@ -8,13 +10,12 @@
   import Button from './lib/components/ui/Button.svelte';
   import Segmented from './lib/components/ui/Segmented.svelte';
   import Kbd from './lib/components/ui/Kbd.svelte';
-  import Glyph from './lib/components/Glyph.svelte';
 
   import { catalogState } from './lib/state/catalog.svelte';
   import { prefs, TILE_SIZES, type ThemePreference, type TileSize } from './lib/state/prefs.svelte';
   import { toasts } from './lib/state/toast.svelte';
   import { urlState } from './lib/state/url';
-  import { copyText } from './lib/core/clipboard';
+  import { copyIconPng, copyText } from './lib/core/clipboard';
   import type { CategoryId, IconDoc } from './lib/core/types';
 
   const THEME_ORDER: readonly ThemePreference[] = ['system', 'light', 'dark'];
@@ -23,7 +24,6 @@
     light: 'Light',
     dark: 'Dark',
   };
-  const THEME_GLYPH = { system: 'monitor', light: 'sun', dark: 'moon' } as const;
 
   const ARROW_KEYS: Record<string, 'left' | 'right' | 'up' | 'down'> = {
     ArrowLeft: 'left',
@@ -143,13 +143,24 @@
       return;
     }
 
+    if (event.key === 'Enter' && onButton) {
+      // Enter on a focused tile copies instead of the default click, which
+      // would only select.
+      if (target?.closest?.('.grid .tile')) {
+        event.preventDefault();
+        if (selectedName) activate(selectedName);
+      }
+      return;
+    }
+
     if (event.key === 'Enter' && !onButton) {
-      // Enter picks the highlighted icon; the related strip then offers the
-      // copy button. Clicking never copies on its own.
+      // Enter copies the highlighted icon, or the top hit when nothing is
+      // highlighted yet — the single most common "find and grab it" flow.
       const name = selectedName ?? catalogState.hits[0]?.icon.name;
       if (name) {
         event.preventDefault();
         selectedName = name;
+        activate(name);
       }
       return;
     }
@@ -164,6 +175,11 @@
 
   function selectRelated(name: string): void {
     selectedName = name;
+  }
+
+  async function copyPng(icon: IconDoc): Promise<void> {
+    const ok = await copyIconPng(icon.position);
+    toasts.show(ok ? 'PNG copied' : 'This browser cannot copy images', ok ? 'success' : 'default');
   }
 
   const entry = $derived<IconDoc | null>(selected);
@@ -215,7 +231,13 @@
         hideLabel
         onclick={cycleTheme}
       >
-        <Glyph name={THEME_GLYPH[prefs.theme]} size={14} />
+        {#if prefs.theme === 'system'}
+          <Monitor size={14} />
+        {:else if prefs.theme === 'light'}
+          <Sun size={14} />
+        {:else}
+          <Moon size={14} />
+        {/if}
       </Button>
     </div>
   </header>
@@ -273,6 +295,7 @@
         icon={entry}
         onselect={selectRelated}
         oncopy={activate}
+        oncopyPng={copyPng}
         onclose={() => (selectedName = null)}
       />
     {/if}

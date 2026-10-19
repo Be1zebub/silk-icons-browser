@@ -18,9 +18,12 @@ const OUT_PNG = 'src/assets/famfamfam/sprite.png';
 const OUT_CSS = 'src/lib/styles/silk.css';
 
 const ICON = 16;
-/** The upstream sheet centres each icon in an 18px cell, so shift by 1px. */
-const CELL_OFFSET = 1;
-/** Columns in the repacked sheet. 32 x 32 holds all 1010 icons with room to spare. */
+/**
+ * The upstream sheet uses an 18px pitch and the published `background-position`
+ * already points at the first pixel of the icon (`accept` is `-1px -1px`, so
+ * its pixels start at 1, not 0). The icon is therefore read from exactly
+ * `|position|`, with no extra offset.
+ */
 const COLUMNS = 32;
 
 const CRC_TABLE = (() => {
@@ -201,8 +204,8 @@ const packed = Buffer.alloc(width * height * 4);
 
 entries.forEach((entry, index) => {
   const [x, y] = entry.position;
-  const fromX = -x + CELL_OFFSET;
-  const fromY = -y + CELL_OFFSET;
+  const fromX = -x;
+  const fromY = -y;
   const toX = index % COLUMNS;
   const toY = Math.floor(index / COLUMNS);
 

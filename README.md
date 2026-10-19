@@ -36,13 +36,17 @@ npm run probe -- q  # try a query from the terminal
 | ---------------- | ---------------------------------------------- |
 | `/` · `Ctrl/⌘ K` | focus search                                  |
 | `↑ ↓ ← →`        | move through the grid                         |
-| `Enter`          | select the highlighted icon                   |
+| `Enter`          | copy the highlighted icon                     |
 | `C`              | copy the selected icon name                   |
 | `Esc`            | close the related strip, then clear the search |
 
 Clicking an icon **selects** it, it does not copy it — with a related strip on
 screen, "click" is not always "I want to copy this". Copying is an explicit
-step: the copy button in the related strip, or `C`.
+step: the copy button in the related strip, `Enter`, or `C`.
+
+The related strip has two copy buttons: **Copy name** puts the icon name on
+the clipboard, **Copy PNG** puts a 16×16 PNG of the icon itself on the
+clipboard, cut straight out of the spritesheet.
 
 Arrow keys move the DOM focus along with the selection, so `Enter` always
 acts on the icon you are standing on — not the one you clicked last. The grid
@@ -236,6 +240,7 @@ vendor/
 scripts/
 ├─ build-sprite.mjs            repacks + re-encodes the sheet, writes silk.css
 ├─ build-catalog.mjs           compiles the search index and the related map
+├─ verify-sprite.mjs           pixel compares the sheet against upstream
 ├─ bench.mjs                   latency benchmark
 └─ probe.mjs                   run a query from the terminal
 src/
@@ -262,8 +267,15 @@ re-encodes with per-scanline filter selection and maximum deflate. Pixel data is
 copied verbatim, so the result is byte-for-byte lossless:
 
 ```
-576x576 RGBA  445.8 KB  ->  512x512 RGBA  273.8 KB   (-39%)
+576x576 RGBA  445.8 KB  ->  512x512 RGBA  282.9 KB   (-37%)
 ```
+
+The upstream `background-position` already points at the first pixel of the
+icon (`accept` is `-1px -1px`, so its pixels start at 1, not 0), so the cell is
+read from exactly `|position|`. Getting that wrong shifts every icon by a
+pixel and clips it — `scripts/verify-sprite.mjs` compares the repacked sheet
+against the upstream pixel by pixel, and `tests/sprite.test.mjs` asserts the
+result stays at zero mismatches.
 
 Indexed-palette encoding would be smaller still, but the artwork contains ~40,000
 distinct RGBA values from anti-aliasing, so any palette reduction would be lossy.
@@ -276,7 +288,8 @@ The catalog is intentionally kept outside Svelte's reactive graph. Wrapping
 
 The visual language follows [Toolcraft](https://github.com/pixel-point/toolcraft)
 (Pixel Point): dark-first oklch tokens, hairline borders mixed with `color-mix`
-transparency, 11–13 px control text, 4 px scrollbars, tight radii, Inter.
+transparency, 11–13 px control text, 4 px scrollbars, tight radii, Inter. The
+interface icons are [Lucide](https://lucide.dev) (`@lucide/svelte`).
 
 ## License
 

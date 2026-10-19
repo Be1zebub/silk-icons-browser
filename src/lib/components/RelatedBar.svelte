@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Glyph from './Glyph.svelte';
+  import { Copy, Image, X } from '@lucide/svelte';
   import { relatedIcons } from '../core/search';
   import { searchIndex } from '../core/index-store';
   import type { IconDoc } from '../core/types';
@@ -8,10 +8,11 @@
     icon: IconDoc;
     onselect: (name: string) => void;
     oncopy: (name: string) => void;
+    oncopyPng: (icon: IconDoc) => void;
     onclose: () => void;
   }
 
-  let { icon, onselect, oncopy, onclose }: Props = $props();
+  let { icon, onselect, oncopy, oncopyPng, onclose }: Props = $props();
 
   const related = $derived(relatedIcons(icon, searchIndex));
 </script>
@@ -48,11 +49,21 @@
     <button
       type="button"
       class="action"
-      title={`Copy ${icon.name}`}
-      aria-label={`Copy ${icon.name}`}
+      title="Copy name"
+      aria-label="Copy name"
       onclick={() => oncopy(icon.name)}
     >
-      <Glyph name="copy" size={13} />
+      <Copy size={13} />
+    </button>
+
+    <button
+      type="button"
+      class="action"
+      title="Copy PNG"
+      aria-label="Copy PNG"
+      onclick={() => oncopyPng(icon)}
+    >
+      <Image size={13} />
     </button>
 
     <button
@@ -62,7 +73,7 @@
       aria-label="Hide related icons"
       onclick={onclose}
     >
-      <Glyph name="close" size={13} />
+      <X size={13} />
     </button>
   </div>
 </div>

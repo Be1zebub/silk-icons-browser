@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { RotateCcw, TriangleAlert } from '@lucide/svelte';
   import Button from './ui/Button.svelte';
-  import Glyph from './Glyph.svelte';
 
   interface Props {
     query: string;
@@ -11,11 +11,11 @@
 </script>
 
 <div class="empty">
-  <span class="mark"><Glyph name="alert" size={18} strokeWidth={1.25} /></span>
+  <span class="mark"><TriangleAlert size={18} strokeWidth={1.5} /></span>
   <h2>No icons match “{query}”</h2>
   <p>Try fewer words, a category instead, or a shorter prefix.</p>
   <Button variant="outline" size="sm" label="Reset search" onclick={onreset}>
-    <Glyph name="reset" size={12} />
+    <RotateCcw size={12} />
     Reset search
   </Button>
 </div>
