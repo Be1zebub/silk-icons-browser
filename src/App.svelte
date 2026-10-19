@@ -188,12 +188,17 @@
 		)
 	}
 
-	function activate(name: string): void {
-		void copy(name, name)
+	/** Every copy counts, whatever the format was. */
+	function recordCopy(name: string): void {
 		copiedName = name
 		usage.recordCopy(name)
 		window.clearTimeout(flashTimer)
 		flashTimer = window.setTimeout(() => (copiedName = null), 850)
+	}
+
+	function activate(name: string): void {
+		void copy(name, name)
+		recordCopy(name)
 	}
 
 	function reset(): void {
@@ -300,6 +305,9 @@
 
 	async function copyPng(icon: IconDoc): Promise<void> {
 		const ok = await copyIconPng(icon.position)
+
+		if (ok) recordCopy(icon.name)
+
 		toasts.show(
 			ok ? "PNG copied" : "This browser cannot copy images",
 			ok ? "success" : "default",
