@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <meta
+      name="description"
+      content="Silk — a fast, keyboard-driven browser for the 1010 FamFamFam Silk icons. Search, inspect at scale, and copy names, CSS classes or rules."
+    />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Silk — icon search" />
+    <meta
+      property="og:description"
+      content="Search, inspect at scale and copy FamFamFam Silk icon names."
+    />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Silk — FamFamFam icon search</title>
+    <script>
+      // Applied before first paint so the theme never flashes.
+      try {
+        var saved = localStorage.getItem('silk.theme');
+        var resolved =
+          !saved || saved === 'system'
+            ? window.matchMedia('(prefers-color-scheme: light)').matches
+              ? 'light'
+              : 'dark'
+            : saved;
+        document.documentElement.dataset.theme = resolved;
+      } catch (_) {}
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

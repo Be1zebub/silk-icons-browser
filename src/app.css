@@ -1,0 +1,227 @@
+@import '@fontsource-variable/inter';
+@import './lib/styles/silk.css';
+
+/* ---------------------------------------------------------------------------
+ * Design tokens — visual language borrowed from Toolcraft (Pixel Point):
+ * tight radii, hairline borders mixed with oklab transparency, 11-13px
+ * control text, 4px scrollbars.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: dark;
+
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.977 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.546 0.215 262.88);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.249 0.07 263.47);
+  --secondary-foreground: oklch(0.977 0 0);
+  --muted: #262626;
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: #0c8ce9;
+  --link: #70b0fa;
+  --ring: oklch(0.556 0 0);
+  --border: oklch(0.311 0.013 279.19);
+  --input: oklch(0.311 0.013 279.19);
+  --destructive: hsl(0 84% 60%);
+  --success: oklch(0.72 0.17 149);
+
+  --radius-xs: 0.125rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs-lh: 0.875rem;
+  --text-xs: 0.75rem;
+  --text-xs-lh: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm-lh: 1.125rem;
+  --text-base: 0.875rem;
+  --text-base-lh: 1.25rem;
+
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration: 140ms;
+
+  --header-h: 3.25rem;
+  --filterbar-h: 2.75rem;
+  --inspector-w: 20rem;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --background: oklch(0.985 0 0);
+  --foreground: oklch(0.22 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0 0);
+  --secondary: oklch(0.93 0.03 263.47);
+  --secondary-foreground: oklch(0.24 0 0);
+  --muted: oklch(0.955 0 0);
+  --muted-foreground: oklch(0.52 0 0);
+  --link: oklch(0.52 0.17 258);
+  --border: oklch(0.89 0.006 279.19);
+  --input: oklch(0.89 0.006 279.19);
+  --ring: oklch(0.52 0 0);
+  --destructive: hsl(0 72% 48%);
+  --success: oklch(0.58 0.15 149);
+}
+
+/* --------------------------------------------------------------------------
+ * Base
+ * ----------------------------------------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  border-color: var(--border);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 12%, transparent) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  min-height: 2.75rem;
+  border: 0 solid transparent;
+  border-radius: 999px;
+  background-color: color-mix(in oklab, var(--foreground) 12%, transparent);
+  background-clip: padding-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--text-base-lh);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--ring) 70%, transparent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+::selection {
+  background: color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+ * Shared primitives
+ * ----------------------------------------------------------------------- */
+
+.surface {
+  background-color: color-mix(in oklab, var(--card) 60%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 45%, transparent);
+  border-radius: var(--radius-lg);
+}
+
+.hairline {
+  background-color: color-mix(in oklab, var(--border) 100%, transparent);
+  height: 1px;
+}
+
+.label-2xs {
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs-lh);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-ligatures: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes silk-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes silk-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
