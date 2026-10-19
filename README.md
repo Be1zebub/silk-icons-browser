@@ -158,6 +158,17 @@ Steps 1 and 2 exist because a name like `accept` or `gun` has no family of its
 own — without them the strip was blank. Within one step the icons are
 alphabetical, so the order is stable.
 
+Picking a related icon always does something visible: if it is part of the
+current results the grid scrolls to it, and if it is not it becomes a
+temporary first result, marked with a dashed border, until the query changes
+or another icon is picked.
+
+### Faceted category counts
+
+The chips count the results of the current query per category, not the static
+totals, so the bar doubles as a facet filter. A category with no results for
+the query is dimmed.
+
 ### The grid is virtualised
 
 The result list is windowed: only the rows around the scroll position are in
