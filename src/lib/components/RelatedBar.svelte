@@ -71,8 +71,8 @@
   .item {
     display: inline-flex;
     flex: none;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 1.5rem;
+    height: 1.5rem;
     align-items: center;
     justify-content: center;
     border: 1px solid transparent;
@@ -96,8 +96,8 @@
   .close {
     display: inline-flex;
     flex: none;
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 1.5rem;
+    height: 1.5rem;
     align-items: center;
     justify-content: center;
     border: 0;

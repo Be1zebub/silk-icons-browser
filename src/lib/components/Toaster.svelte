@@ -20,7 +20,7 @@
 <style>
   .stack {
     position: fixed;
-    bottom: 1.25rem;
+    bottom: var(--toast-offset, 1.25rem);
     left: 50%;
     z-index: 40;
     display: flex;

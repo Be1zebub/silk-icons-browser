@@ -169,6 +169,11 @@
   }
 
   const entry = $derived<IconEntry | null>(selected);
+
+  // Keep the toast clear of the related strip.
+  $effect(() => {
+    document.documentElement.style.setProperty('--toast-offset', entry ? '4.25rem' : '1.25rem');
+  });
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
