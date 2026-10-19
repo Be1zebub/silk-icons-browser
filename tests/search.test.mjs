@@ -56,7 +56,7 @@ const QUERIES = [
   ['gear', 'cog'],
   ['trash', 'bin'],
   ['avatar', 'user'],
-  ['settings', 'wrench'],
+  ['settings', 'cog'],
   ['directory', 'folder'],
   ['app', 'application'],
   ['print', 'printer'],
@@ -233,21 +233,43 @@ describe('highlighting', () => {
 describe('relatedIcons', () => {
   const byName = new Map(index.docs.map((doc) => [doc.name, doc]));
 
-  it('prefers the trailing name segment', () => {
-    const related = relatedIcons(byName.get('folder_table'), index.docs).map((doc) => doc.name);
+  it('never returns an empty strip', () => {
+    const empty = index.docs.filter((doc) => relatedIcons(doc, index).length === 0);
+    assert.deepEqual(
+      empty.map((doc) => doc.name),
+      [],
+    );
+  });
+
+  it('puts the explicit relations first', () => {
+    const related = relatedIcons(byName.get('accept'), index).map((doc) => doc.name);
+    assert.ok(related.includes('tick'));
+    assert.ok(related.includes('cross'));
+    assert.ok(related.includes('cancel'));
+  });
+
+  it('points a compound name at the icons its segments refer to', () => {
+    const related = relatedIcons(byName.get('folder_add'), index).map((doc) => doc.name);
+    assert.equal(related[0], 'folder');
+    assert.ok(related.includes('add'));
+  });
+
+  it('keeps the family of a compound name', () => {
+    const related = relatedIcons(byName.get('folder_table'), index).map((doc) => doc.name);
     assert.ok(related.includes('table'));
     assert.ok(related.includes('table_add'));
-    assert.ok(!related.includes('folder_add'));
   });
 
   it('falls back to the leading segment for one-off names', () => {
-    const related = relatedIcons(byName.get('application_view_columns'), index.docs).map((doc) => doc.name);
+    const related = relatedIcons(byName.get('application_view_columns'), index).map((doc) => doc.name);
     assert.ok(related.includes('application'));
   });
 
   it('never returns the icon itself', () => {
-    const related = relatedIcons(byName.get('folder'), index.docs).map((doc) => doc.name);
-    assert.ok(!related.includes('folder'));
+    for (const doc of index.docs) {
+      const related = relatedIcons(doc, index).map((entry) => entry.name);
+      assert.ok(!related.includes(doc.name), doc.name);
+    }
   });
 });
 

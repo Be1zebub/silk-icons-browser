@@ -404,19 +404,21 @@ export function searchIcons({ query, category, index }: SearchOptions): SearchOu
   return { hits, fuzzy, duration: performance.now() - startedAt };
 }
 
-/** Icons belonging to the same family, for the related strip. */
-export function relatedIcons(icon: IconDoc, docs: readonly IconDoc[], limit = 32): IconDoc[] {
-  const segments = icon.segments;
-  const families = [...new Set([segments.at(-1), segments[0]].filter(Boolean))] as string[];
+/**
+ * Icons related to the given one, straight from the precomputed index.
+ *
+ * The build step ranks them by how specific the evidence is: an explicit
+ * relation first, then a shared name segment (rarest segment first), then a
+ * synonym peer, then the rest of the category — so the strip is never empty.
+ */
+export function relatedIcons(icon: IconDoc, index: SearchIndex, limit = 32): IconDoc[] {
+  const ids = index.related[icon.id] ?? [];
+  const related: IconDoc[] = [];
 
-  const collect = (family: string) =>
-    docs.filter((candidate) => candidate.id !== icon.id && candidate.segments[0] === family);
-
-  for (const family of families) {
-    const matches = collect(family);
-    if (matches.length >= 3) return matches.slice(0, limit);
+  for (const id of ids) {
+    if (related.length >= limit) break;
+    related.push(index.docs[id]);
   }
 
-  const best = families.map(collect).reduce((a, b) => (b.length > a.length ? b : a), []);
-  return best.slice(0, limit);
+  return related;
 }

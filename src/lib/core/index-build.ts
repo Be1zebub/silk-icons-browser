@@ -60,5 +60,6 @@ export function buildIndex(source: RawCatalog): SearchIndex {
     categoryWords: source.categoryWords,
     categoryIcons,
     categoryCounts: buildCategoryCounts(categoryIcons),
+    related: source.related,
   };
 }

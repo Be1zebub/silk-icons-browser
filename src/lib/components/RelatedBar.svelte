@@ -1,18 +1,18 @@
 <script lang="ts">
   import Glyph from './Glyph.svelte';
   import { relatedIcons } from '../core/search';
+  import { searchIndex } from '../core/index-store';
   import type { IconDoc } from '../core/types';
 
   interface Props {
     icon: IconDoc;
-    entries: readonly IconDoc[];
     onselect: (name: string) => void;
     onclose: () => void;
   }
 
-  let { icon, entries, onselect, onclose }: Props = $props();
+  let { icon, onselect, onclose }: Props = $props();
 
-  const related = $derived(relatedIcons(icon, entries, 32));
+  const related = $derived(relatedIcons(icon, searchIndex));
 </script>
 
 <div class="related-bar" role="group" aria-label="Related icons">

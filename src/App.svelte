@@ -273,7 +273,6 @@
     {#if entry}
       <RelatedBar
         icon={entry}
-        entries={catalogState.entries}
         onselect={selectRelated}
         onclose={() => (selectedName = null)}
       />

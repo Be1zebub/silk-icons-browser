@@ -51,6 +51,8 @@ export interface RawCatalog {
   vocab: readonly string[];
   /** Parallel to `vocab`: icon ids per token. */
   exact: readonly (readonly number[])[];
+  /** Parallel to `icons`: related icon ids for the related strip. */
+  related: readonly (readonly number[])[];
 }
 
 /** The compiled index the search engine runs against. */
@@ -64,6 +66,8 @@ export interface SearchIndex {
   categoryWords: Readonly<Record<string, number>>;
   categoryIcons: ReadonlyMap<CategoryId, readonly number[]>;
   categoryCounts: Readonly<Record<string, number>>;
+  /** Precomputed related icon ids, parallel to `docs`. */
+  related: readonly (readonly number[])[];
 }
 
 export type Range = readonly [start: number, end: number];

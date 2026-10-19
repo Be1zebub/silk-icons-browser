@@ -9,6 +9,7 @@
 //   exact    [[0], [1], [2, 5], ...]  parallel to vocab: icon ids per token
 //   synonyms { "search": ["find", "magnifier", "zoom"] }
 //   categoryWords { "person": 3, "people": 3 }
+//   related  [[1, 2], [3], ...]      parallel to icons: related icon ids
 //
 // The inverted `exact` map is what makes a lookup O(1) instead of a scan over
 // 1,010 icons, and keeping synonyms in one shared map (instead of baking the
@@ -128,18 +129,18 @@ const PREFIX_CATEGORY = {
 };
 
 /**
- * Synonym groups. Every member of a group can reach every other member, so a
- * query for any of them lands on the same icons.
+ * Synonym groups for query expansion. Every member of a group can reach every
+ * other member, so a query for any of them lands on the same icons.
  *
  * The first entry of a group is its canonical icon and gets a small ranking
- * bonus, so `bin` is the group lead for the trash family and `cog` leads the
- * settings family.
+ * bonus, so `cog` is the group lead for the settings family and `bin` leads
+ * the trash family.
  *
  * Kept deliberately small: a group member that is a common word (`dir`,
  * `copy`, `page`) poisons every other icon whose keyword list contains it.
  */
 const SYNONYMS = {
-  accept: ['ok', 'yes', 'check', 'done', 'success', 'tick', 'approve'],
+  accept: ['ok', 'yes', 'check', 'done', 'success', 'tick', 'approve', 'confirm'],
   add: ['plus', 'new', 'create', 'insert', 'append'],
   application: ['app', 'window', 'program', 'desktop'],
   arrow: ['direction', 'pointer'],
@@ -151,6 +152,8 @@ const SYNONYMS = {
   book: ['manual', 'docs', 'documentation', 'readme'],
   brick: ['wall', 'masonry'],
   bug: ['debug', 'issue', 'defect'],
+  calculator: ['math', 'sum', 'calculate'],
+  camera: ['photo', 'picture', 'snapshot'],
   cancel: ['close', 'cross', 'abort', 'discard'],
   car: ['auto', 'vehicle', 'drive'],
   cart: ['basket', 'shop', 'checkout'],
@@ -162,9 +165,16 @@ const SYNONYMS = {
   computer: ['desktop', 'pc', 'machine'],
   connect: ['link', 'chain', 'network', 'online'],
   control: ['player', 'playback'],
+  creditcards: ['payment', 'card', 'visa'],
+  coins: ['change', 'money'],
+  cross: ['cancel', 'close'],
   cursor: ['pointer', 'mouse', 'click'],
+  cup: ['coffee', 'mug', 'drink'],
+  database: ['db', 'sql', 'data'],
+  delete: ['remove', 'erase', 'destroy', 'trash'],
   disconnect: ['offline', 'unlink'],
   disk: ['save', 'floppy'],
+  drink: ['coffee', 'beverage', 'cup'],
   drive: ['disk', 'storage', 'hdd'],
   email: ['mail', 'message', 'letter', 'envelope'],
   error: ['alert', 'danger', 'warning', 'problem', 'invalid'],
@@ -172,8 +182,12 @@ const SYNONYMS = {
   eye: ['view', 'preview', 'watch', 'visible'],
   feed: ['rss', 'news', 'subscribe'],
   film: ['movie', 'video', 'cinema'],
+  fire: ['flame', 'burn', 'hot'],
+  flag: ['country', 'nation'],
   folder: ['directory'],
   group: ['users', 'people', 'team', 'community'],
+  gun: ['weapon', 'pistol', 'firearm', 'rifle', 'shoot', 'ammo', 'bullet'],
+  bomb: ['explosive', 'mine', 'grenade'],
   heart: ['favorite', 'like', 'love'],
   help: ['question', 'info', 'support', 'faq'],
   house: ['home', 'main'],
@@ -181,10 +195,15 @@ const SYNONYMS = {
   image: ['photo', 'picture'],
   information: ['info', 'details', 'about'],
   key: ['password', 'access', 'auth'],
+  layout: ['grid', 'template', 'arrange'],
+  lightning: ['bolt', 'power', 'energy'],
   lightbulb: ['idea', 'inspiration', 'tip'],
   link: ['url', 'chain', 'anchor', 'hyperlink'],
   lock: ['secure', 'security', 'password', 'private'],
+  lorry: ['truck', 'freight', 'shipping'],
   magnifier: ['search', 'find', 'zoom', 'lookup'],
+  medal: ['award', 'prize', 'silver', 'gold'],
+  monitor: ['display', 'screen', 'panel'],
   money: ['cash', 'currency', 'payment', 'price'],
   mouse: ['cursor', 'pointer', 'click'],
   music: ['audio', 'sound', 'song', 'player'],
@@ -192,11 +211,14 @@ const SYNONYMS = {
   package: ['box', 'parcel', 'delivery'],
   page: ['file', 'document', 'paper', 'blank'],
   pencil: ['edit', 'write', 'modify', 'rename'],
+  phone: ['call', 'telephone'],
   picture: ['image', 'photo'],
+  pill: ['medicine', 'drug', 'health'],
   plugin: ['extension', 'addon', 'module'],
   printer: ['print'],
   rainbow: ['colorful', 'gradient'],
   report: ['analytics', 'chart', 'stats'],
+  resultset: ['first', 'last', 'next', 'previous', 'pager'],
   ruby: ['gem', 'lang', 'code'],
   script: ['code', 'javascript', 'program'],
   server: ['host', 'backend', 'cloud'],
@@ -205,16 +227,109 @@ const SYNONYMS = {
   status: ['online', 'offline', 'presence'],
   table: ['grid', 'spreadsheet', 'data', 'rows'],
   tag: ['label', 'mark'],
+  telephone: ['call', 'phone'],
   text: ['font', 'typography'],
   textfield: ['input', 'field', 'form'],
   time: ['clock', 'hour', 'schedule'],
+  timeline: ['history', 'progress'],
   transmit: ['send', 'upload', 'broadcast'],
   user: ['person', 'profile', 'account', 'avatar'],
   vector: ['svg', 'path', 'shape'],
+  water: ['drop', 'liquid', 'ocean'],
   weather: ['forecast', 'rain', 'cloud', 'sun'],
   world: ['globe', 'internet', 'web', 'earth'],
   wrench: ['tools', 'repair', 'maintenance', 'settings'],
   xhtml: ['markup', 'web', 'page'],
+};
+
+/**
+ * Explicit icon-to-icon relations for the related strip.
+ *
+ * The synonym groups above are built for query expansion, where a term must
+ * reach exactly one canonical icon. Here we want the whole neighbourhood of
+ * an icon, so the relations are symmetric and may list several peers — this
+ * is what gives single segment icons like `accept` or `gun` a useful strip
+ * instead of an empty one.
+ */
+const RELATIONS = {
+  accept: ['tick', 'cross', 'cancel', 'stop'],
+  tick: ['accept', 'cross'],
+  cross: ['cancel', 'accept', 'delete', 'tick'],
+  cancel: ['cross', 'accept', 'stop'],
+  stop: ['cancel', 'pause'],
+  delete: ['bin', 'cross', 'cancel'],
+  bin: ['delete', 'cross'],
+  zoom: ['magnifier', 'find'],
+  magnifier: ['zoom', 'find'],
+  find: ['magnifier', 'zoom'],
+  lock: ['key', 'shield', 'lock_open'],
+  key: ['lock', 'shield'],
+  shield: ['lock', 'key'],
+  user: ['group', 'vcard', 'female', 'male', 'emoticon_smile'],
+  group: ['user'],
+  star: ['heart', 'thumb_up', 'award_star_add'],
+  heart: ['star', 'thumb_up'],
+  money: ['coins', 'creditcards'],
+  coins: ['money'],
+  creditcards: ['money'],
+  clock: ['time', 'calendar', 'hourglass'],
+  time: ['clock', 'hourglass'],
+  calendar: ['date', 'clock', 'time'],
+  hourglass: ['time', 'clock'],
+  cog: ['wrench', 'control'],
+  wrench: ['cog', 'paintbrush', 'plug'],
+  error: ['exclamation', 'bug', 'status'],
+  exclamation: ['error', 'bug'],
+  bug: ['error', 'exclamation'],
+  help: ['information', 'lightbulb'],
+  information: ['help', 'lightbulb'],
+  lightbulb: ['help', 'information'],
+  gun: ['bomb', 'fire'],
+  bomb: ['gun', 'fire'],
+  fire: ['bomb', 'water'],
+  water: ['fire', 'weather'],
+  lightning: ['plug', 'asterisk_orange'],
+  status: ['online', 'offline', 'busy', 'away'],
+  monitor: ['computer', 'television'],
+  television: ['monitor', 'film'],
+  film: ['television', 'camera'],
+  camera: ['photo', 'picture'],
+  picture: ['image', 'photo', 'camera'],
+  image: ['picture', 'photo'],
+  photo: ['picture', 'image', 'camera'],
+  email: ['mail', 'comment'],
+  comment: ['comments', 'email'],
+  comments: ['comment', 'email'],
+  feed: ['rss', 'email'],
+  rss: ['feed', 'email'],
+  page: ['note', 'book', 'report'],
+  book: ['page', 'note', 'newspaper'],
+  note: ['page', 'book'],
+  report: ['chart', 'table'],
+  chart: ['report', 'table'],
+  table: ['chart', 'report'],
+  database: ['server', 'drive'],
+  server: ['database', 'computer'],
+  drive: ['disk', 'database'],
+  disk: ['drive'],
+  folder: ['drive', 'page'],
+  application: ['layout'],
+  layout: ['application', 'table'],
+  textfield: ['comment', 'table'],
+  text: ['font', 'textfield'],
+  font: ['text', 'textfield'],
+  tag: ['star', 'heart'],
+  cart: ['basket', 'coins'],
+  basket: ['cart', 'money'],
+  world: ['map', 'globe'],
+  map: ['world', 'globe'],
+  weather: ['water', 'fire'],
+  building: ['house', 'office'],
+  house: ['building'],
+  lorry: ['car', 'package'],
+  car: ['lorry', 'package'],
+  package: ['box', 'lorry'],
+  pill: ['medicine'],
 };
 
 /** Extra words that resolve to a whole category. */
@@ -236,6 +351,9 @@ const CATEGORY_WORDS = {
   status: ['state', 'signal'],
   misc: ['other'],
 };
+
+/** How many related icons are stored per icon. */
+const RELATED_SIZE = 12;
 
 const tokenize = (value) =>
   value
@@ -287,9 +405,15 @@ function buildSynonyms(vocab) {
     for (const member of values) {
       if (leads.has(member)) continue;
 
-      const reachable = inVocab.has(lead) ? [lead, ...others.filter((value) => value !== member)] : others.filter((value) => value !== member);
+      const reachable = inVocab.has(lead)
+        ? [lead, ...others.filter((value) => value !== member)]
+        : others.filter((value) => value !== member);
       if (reachable.length === 0) continue;
-      synonyms[member] = reachable;
+
+      // A member can sit in several groups (`trash` is in both the bin group
+      // and the delete group). Merge the lists, each group's lead first.
+      const existing = synonyms[member] ?? [];
+      synonyms[member] = [...existing, ...reachable.filter((value) => !existing.includes(value))];
     }
   }
 
@@ -306,6 +430,64 @@ function buildCategoryWords() {
   });
 
   return words;
+}
+
+/**
+ * Builds the related strip for every icon.
+ *
+ * Evidence is ranked by how specific it is:
+ *   1. an explicit relation (`accept` -> `tick`, `cross`, `cancel`)
+ *   2. the icons a name segment points at on its own (`folder_add` -> the
+ *      `folder` icon and the `add` icon)
+ *   3. the family that shares the first segment (`folder_*`)
+ *   4. a synonym peer that is an icon name
+ *   5. the rest of the category, so the strip is never empty
+ */
+function buildRelated(icons, vocabIndex, exact, synonyms, categoryIcons) {
+  const byName = new Map(icons.map((icon, index) => [icon.n, index]));
+
+  return icons.map((icon, id) => {
+    const peers = [];
+    const seen = new Set([id]);
+
+    const push = (candidate) => {
+      if (candidate === undefined || seen.has(candidate)) return;
+      seen.add(candidate);
+      peers.push(candidate);
+    };
+
+    const segments = tokenize(icon.n);
+
+    // 1. explicit relations
+    for (const name of RELATIONS[icon.n] ?? []) push(byName.get(name));
+
+    // 2. the icons a segment points at on its own
+    for (const segment of segments) push(byName.get(segment));
+
+    // 3. the families a segment points at, rarest family first
+    const families = segments
+      .map((segment) => ({ ids: exact[vocabIndex.get(segment) ?? -1] ?? [] }))
+      .filter((family) => family.ids.length > 0)
+      .sort((left, right) => left.ids.length - right.ids.length);
+
+    for (const family of families) {
+      for (const peer of family.ids) push(peer);
+    }
+
+    // 4. synonym peers
+    for (const segment of segments) {
+      for (const synonym of synonyms[segment] ?? []) {
+        const position = vocabIndex.get(synonym);
+        if (position === undefined) continue;
+        for (const peer of exact[position]) push(peer);
+      }
+    }
+
+    // 5. the rest of the category
+    for (const peer of categoryIcons.get(icon.c) ?? []) push(peer);
+
+    return peers.slice(0, RELATED_SIZE);
+  });
 }
 
 const sprite = readSprite();
@@ -337,6 +519,15 @@ icons.forEach((icon, id) => {
 const synonyms = buildSynonyms(vocab);
 const categoryWords = buildCategoryWords();
 
+const categoryIcons = new Map();
+icons.forEach((icon, id) => {
+  const bucket = categoryIcons.get(icon.c) ?? [];
+  bucket.push(id);
+  categoryIcons.set(icon.c, bucket);
+});
+
+const related = buildRelated(icons, vocabIndex, exact, synonyms, categoryIcons);
+
 const catalog = {
   version: 2,
   categories: CATEGORIES,
@@ -345,15 +536,29 @@ const catalog = {
   icons,
   vocab,
   exact,
+  related,
 };
 
 const target = path.resolve('src/lib/data/catalog.json');
-const json = JSON.stringify(catalog);
-writeFileSync(target, `${json}\n`);
+const json = `${JSON.stringify(catalog)}\n`;
+
+// Only write when the content changed, so a dev server watcher never loops.
+let previous = '';
+try {
+  previous = readFileSync(target, 'utf8');
+} catch {
+  previous = '';
+}
+
+if (previous !== json) {
+  writeFileSync(target, json);
+  console.log(`wrote ${icons.length} icons to ${target}`);
+} else {
+  console.log(`${target} is up to date`);
+}
 
 const counts = new Map();
 for (const icon of icons) counts.set(icon.c, (counts.get(icon.c) ?? 0) + 1);
 
-console.log(`wrote ${icons.length} icons, ${vocab.length} tokens to ${target}`);
 console.log(`  payload ${(json.length / 1024).toFixed(1)} KB uncompressed`);
 console.log(`  ${CATEGORIES.map(({ id }) => `${id}=${counts.get(categoryIndex.get(id)) ?? 0}`).join(' ')}`);

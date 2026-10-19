@@ -15,12 +15,16 @@ npm install
 npm run dev
 ```
 
-`npm run dev` regenerates the sprite assets and the catalog first, then starts
-Vite on <http://localhost:5178>.
+Vite on <http://localhost:5178>. A small Vite plugin (`silkAssets` in
+`vite.config.ts`) regenerates the sprite and the search index before the server
+or the build starts, so the assets can never go stale. The generators only
+write when the output actually changed, which keeps the dev watcher from
+looping on its own.
 
 ```bash
 npm run build       # production build into dist/
 npm run preview     # serve the production build
+npm run build:data  # regenerate the sprite and the index only
 npm run check       # svelte-check
 npm test            # node:test unit tests, including the MRR suite
 npm run bench       # search latency benchmark
@@ -57,6 +61,7 @@ query itself.
   "icons":    [{ "n": "accept", "c": 0, "p": [-1, -1] }],  // name, category, sprite position
   "vocab":    ["accept", "add", "anchor", ...],             // 388 distinct name tokens
   "exact":    [[0], [1], [2, 5], ...],                    // token -> icon ids
+  "related":  [[1, 2, 3], [4, 5], ...],                   // icon -> related icon ids
   "synonyms": { "search": ["magnifier", "find", "zoom"] },
   "categoryWords": { "person": 5, "people": 5 }
 }
@@ -66,7 +71,7 @@ query itself.
 1,010 icons, and the fuzzy pass runs over the 388-token vocabulary rather than
 over the icons.
 
-**60.4 KB** uncompressed, against a 150 KB budget.
+**108 KB** uncompressed, against a 150 KB budget.
 
 ### Tiers
 
@@ -127,13 +132,29 @@ Matches are resolved to name *segments*, not substrings, so the highlight
 covers exactly what matched — the whole segment for an exact or alias match,
 the matched prefix for a prefix match.
 
+### Related strip
+
+The strip at the bottom of the grid is driven by a precomputed `related` map.
+Evidence is ranked by how specific it is:
+
+1. an explicit relation (`accept` → `tick`, `cross`, `cancel`, `stop`)
+2. the icons a name segment points at on its own (`folder_add` → the `folder`
+   icon and the `add` icon)
+3. the family a segment points at, rarest family first (`folder_table` →
+   `table_add`, `table_delete`, …)
+4. a synonym peer that is an icon name
+5. the rest of the category, so the strip is never empty
+
+Steps 1 and 2 exist because a name like `accept` or `gun` has no family of its
+own — without them the strip was blank.
+
 ## Performance
 
 `npm run bench`, 5,000 iterations over a mix of exact, prefix, synonym, typo,
 multi-token and empty queries:
 
 ```
-index        60.4 KB uncompressed, 388 tokens, 1010 icons
+index        108.0 KB uncompressed, 388 tokens, 1010 icons
 cold call    14.0 ms
 mean         0.14 ms
 p50          0.15 ms
@@ -196,7 +217,7 @@ vendor/
 └─ famfamfam-silk.css          pristine upstream position map
 scripts/
 ├─ build-sprite.mjs            repacks + re-encodes the sheet, writes silk.css
-├─ build-catalog.mjs           compiles the search index
+├─ build-catalog.mjs           compiles the search index and the related map
 ├─ bench.mjs                   latency benchmark
 └─ probe.mjs                   run a query from the terminal
 src/

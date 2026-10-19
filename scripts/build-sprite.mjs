@@ -216,7 +216,7 @@ entries.forEach((entry, index) => {
 const png = encodePng({ width, height, pixels: packed });
 
 mkdirSync(path.dirname(OUT_PNG), { recursive: true });
-writeFileSync(OUT_PNG, png);
+mkdirSync(path.dirname(OUT_CSS), { recursive: true });
 
 const stylesheet = [
   '/*',
@@ -251,10 +251,28 @@ const rules = entries.map((entry, index) => {
   return `.silk.${entry.name}{background-position:calc(${x} * var(--silk-scale)) calc(${y} * var(--silk-scale))}`;
 });
 
-mkdirSync(path.dirname(OUT_CSS), { recursive: true });
-writeFileSync(OUT_CSS, `${stylesheet}${rules.join('\n')}\n`);
-
 const before = readFileSync(VENDOR_PNG).length;
+
+// Only write when the content changed, so a dev server watcher never loops.
+function writeIfChanged(file, content) {
+  let previous = '';
+  try {
+    previous = readFileSync(file, 'utf8');
+  } catch {
+    previous = '';
+  }
+
+  if (previous === content) return false;
+  writeFileSync(file, content);
+  return true;
+}
+
+const pngChanged = writeIfChanged(OUT_PNG, png);
+const cssChanged = writeIfChanged(OUT_CSS, `${stylesheet}${rules.join('\n')}\n`);
+
 console.log(`packed ${entries.length} icons into ${width}x${height}`);
-console.log(`sprite: ${(before / 1024).toFixed(1)} KB -> ${(png.length / 1024).toFixed(1)} KB (${((1 - png.length / before) * 100).toFixed(0)}% smaller, lossless)`);
-console.log(`wrote ${OUT_PNG} and ${OUT_CSS}`);
+console.log(
+  `sprite: ${(before / 1024).toFixed(1)} KB -> ${(png.length / 1024).toFixed(1)} KB (${((1 - png.length / before) * 100).toFixed(0)}% smaller, lossless)`,
+);
+console.log(`${pngChanged ? 'wrote' : 'unchanged'} ${OUT_PNG}`);
+console.log(`${cssChanged ? 'wrote' : 'unchanged'} ${OUT_CSS}`);
