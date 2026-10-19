@@ -6,12 +6,19 @@
   let { keys }: Props = $props();
 
   const list = $derived(typeof keys === 'string' ? [keys] : keys);
+
+  /**
+   * A few glyphs need a different size to sit right in the 18px key box:
+   * the enter arrow is far too small at the base size, the slash needs a
+   * little more presence than a letter would have.
+   */
+  const SIZES: Record<string, string> = {
+    '⏎': '0.85rem',
+    '/': '0.72rem',
+  };
 </script>
 
-{#each list as key, index (key)}
-  {#if index > 0}<span class="plus">+</span>{/if}
-  <kbd>{key}</kbd>
-{/each}
+{#each list as key, index (key)}{#if index > 0}<span class="plus">+</span>{/if}<kbd style:font-size={SIZES[key]}>{key}</kbd>{/each}
 
 <style>
   kbd {

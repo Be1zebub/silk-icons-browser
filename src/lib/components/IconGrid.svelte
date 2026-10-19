@@ -2,8 +2,14 @@
   import IconTile from './IconTile.svelte';
   import type { SearchHit } from '../core/types';
 
-  const PAGE = 120;
-  const FIRST_PAGE = 160;
+  /** Rows rendered above and below the viewport. */
+  const OVERSCAN = 2;
+  /** Grid gap, must match the stylesheet. */
+  const GAP = 2;
+  /** Fallback row height before the first measurement (px). */
+  const FALLBACK_ROW_HEIGHT = 116;
+  /** Fallback viewport height before the first measurement (px). */
+  const FALLBACK_VIEWPORT_HEIGHT = 800;
 
   interface Props {
     hits: readonly SearchHit[];
@@ -13,54 +19,74 @@
     /** Minimum tile width derived from the current preview size. */
     tileMin: number;
     onselect: (name: string) => void;
-    onactivate: (name: string) => void;
   }
 
-  let { hits, tileSize, selected, copied, tileMin, onselect, onactivate }: Props = $props();
+  let { hits, tileSize, selected, copied, tileMin, onselect }: Props = $props();
 
+  let viewport = $state<HTMLDivElement | null>(null);
   let grid = $state<HTMLDivElement | null>(null);
-  let sentinel = $state<HTMLDivElement | null>(null);
-  let visible = $state(FIRST_PAGE);
-  let columns = $state(1);
+  let scrollTop = $state(0);
+  let viewportHeight = $state(FALLBACK_VIEWPORT_HEIGHT);
+  let gridWidth = $state(0);
+  let rowHeight = $state(FALLBACK_ROW_HEIGHT);
 
-  const shown = $derived(hits.slice(0, visible));
-  const hasMore = $derived(visible < hits.length);
+  /**
+   * The grid is windowed: only the rows around the scroll position exist in
+   * the DOM, and a spacer of the full height keeps the scrollbar honest.
+   *
+   * The previous version appended items as you scrolled, which grew the
+   * content and made the scrollbar thumb shrink while you moved down.
+   */
+  const columns = $derived(
+    gridWidth > 0 ? Math.max(1, Math.floor((gridWidth + GAP) / (tileMin + GAP))) : 1,
+  );
 
-  // A new result set restarts paging from the top.
-  $effect(() => {
-    void hits;
-    visible = FIRST_PAGE;
-  });
+  const rowCount = $derived(Math.max(1, Math.ceil(hits.length / columns)));
+  const totalHeight = $derived(rowCount * rowHeight);
+  const firstRow = $derived(Math.max(0, Math.floor(scrollTop / rowHeight) - OVERSCAN));
+  const visibleRows = $derived(Math.ceil(viewportHeight / rowHeight) + OVERSCAN * 2 + 1);
+
+  const startIndex = $derived(Math.min(hits.length, firstRow * columns));
+  const endIndex = $derived(Math.min(hits.length, (firstRow + visibleRows) * columns));
+  const shown = $derived(hits.slice(startIndex, endIndex));
+  const offsetY = $derived(firstRow * rowHeight);
+
+  /** Keeps the measured row height in sync with the real layout. */
+  let measuredRowHeight = FALLBACK_ROW_HEIGHT;
 
   $effect(() => {
     const element = grid;
     if (!element) return;
 
-    const observer = new ResizeObserver(() => {
+    const measure = () => {
+      const children = element.children;
       const template = getComputedStyle(element).gridTemplateColumns;
-      columns = Math.max(1, template.split(' ').filter(Boolean).length);
-    });
+      const columnCount = template.split(' ').filter(Boolean).length;
 
+      // The cell one row down is the one that tells us the row pitch.
+      if (children.length <= columnCount) return;
+
+      const first = children[0] as HTMLElement;
+      const below = children[columnCount] as HTMLElement;
+      const pitch = below.offsetTop - first.offsetTop;
+
+      if (pitch > 0 && pitch !== measuredRowHeight) {
+        measuredRowHeight = pitch;
+        rowHeight = pitch;
+      }
+    };
+
+    measure();
+
+    const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
   });
 
-  $effect(() => {
-    const element = sentinel;
-    if (!element) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) {
-          visible = Math.min(visible + PAGE, hits.length);
-        }
-      },
-      { rootMargin: '600px 0px' },
-    );
-
-    observer.observe(element);
-    return () => observer.disconnect();
-  });
+  function handleScroll(): void {
+    if (!viewport) return;
+    scrollTop = viewport.scrollTop;
+  }
 
   /**
    * Moves the selection. `focus` also moves the DOM focus, so Enter activates
@@ -75,65 +101,71 @@
 
     if (next === current) return;
 
-    if (next >= visible) visible = Math.min(hits.length, next + PAGE);
     onselect(hits[next].icon.name);
+    scrollToIndex(next);
 
     if (focus) focusTile(hits[next].icon.name);
-    else scrollIntoView(hits[next].icon.name);
+  }
+
+  function scrollToIndex(index: number): void {
+    if (!viewport) return;
+
+    const row = Math.floor(index / columns);
+    const target = row * rowHeight;
+    const top = viewport.scrollTop;
+    const bottom = top + viewport.clientHeight;
+
+    if (target < top) viewport.scrollTop = target;
+    else if (target + rowHeight > bottom) viewport.scrollTop = target + rowHeight - viewport.clientHeight;
   }
 
   function focusTile(name: string): void {
     requestAnimationFrame(() => {
       const tile = grid?.querySelector<HTMLElement>(`[data-name="${CSS.escape(name)}"] .tile`);
       tile?.focus({ preventScroll: true });
-      tile?.scrollIntoView({ block: 'nearest' });
-    });
-  }
-
-  function scrollIntoView(name: string): void {
-    requestAnimationFrame(() => {
-      grid?.querySelector(`[data-name="${CSS.escape(name)}"]`)?.scrollIntoView({ block: 'nearest' });
     });
   }
 </script>
 
-<div class="viewport">
-  <div
-    class="grid"
-    bind:this={grid}
-    role="listbox"
-    aria-label="Icon results"
-    tabindex="-1"
-    style="--tile-min: {tileMin}px"
-  >
-    {#each shown as hit, index (hit.icon.name)}
-      <div class="cell" data-name={hit.icon.name} role="presentation">
-        <IconTile
-          name={hit.icon.name}
-          ranges={hit.ranges}
-          size={tileSize}
-          selected={selected === hit.icon.name}
-          copied={copied === hit.icon.name}
-          tabbable={selected === hit.icon.name || (!selected && index === 0)}
-          title="Copy {hit.icon.name}"
-          onclick={() => {
-            onselect(hit.icon.name);
-            onactivate(hit.icon.name);
-          }}
-        />
+<div
+  class="viewport"
+  bind:this={viewport}
+  bind:clientHeight={viewportHeight}
+  onscroll={handleScroll}
+>
+  <div class="sizer" style="height: {totalHeight}px">
+    <div class="window" style="transform: translateY({offsetY}px)">
+      <div
+        class="grid"
+        bind:this={grid}
+        bind:clientWidth={gridWidth}
+        role="listbox"
+        aria-label="Icon results"
+        tabindex="-1"
+        style="--columns: {columns}"
+      >
+        {#each shown as hit (hit.icon.name)}
+          <div class="cell" data-name={hit.icon.name} role="presentation">
+            <IconTile
+              name={hit.icon.name}
+              ranges={hit.ranges}
+              size={tileSize}
+              selected={selected === hit.icon.name}
+              copied={copied === hit.icon.name}
+              tabbable={selected === hit.icon.name || (!selected && hit.icon.name === hits[0]?.icon.name)}
+              title={hit.icon.name}
+              onclick={() => onselect(hit.icon.name)}
+            />
+          </div>
+        {/each}
       </div>
-    {/each}
-  </div>
-
-  <div class="sentinel" bind:this={sentinel}>
-    {#if hasMore}
-      <span>{hits.length - visible} more</span>
-    {/if}
+    </div>
   </div>
 </div>
 
 <style>
   .viewport {
+    position: relative;
     min-height: 0;
     flex: 1;
     overflow-y: auto;
@@ -141,10 +173,23 @@
     scroll-padding-block: 1rem;
   }
 
+  .sizer {
+    position: relative;
+    width: 100%;
+  }
+
+  .window {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    will-change: transform;
+  }
+
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
-    gap: 0.125rem;
+    grid-template-columns: repeat(var(--columns, 1), minmax(0, 1fr));
+    gap: 2px;
     outline: none;
   }
 
@@ -155,16 +200,5 @@
 
   .cell :global(.tile) {
     width: 100%;
-  }
-
-  .sentinel {
-    display: flex;
-    min-height: 1.25rem;
-    align-items: center;
-    justify-content: center;
-    padding-top: 1rem;
-    font-size: var(--text-2xs);
-    line-height: var(--text-2xs-lh);
-    color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
   }
 </style>

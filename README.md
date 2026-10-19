@@ -2,9 +2,8 @@
 
 A fast, keyboard-driven browser for the 1,010 icons in the [FamFamFam "Silk" set](https://www.famfamfam.com/lab/icons/silk/).
 
-Search by name, keyword or category, then click an icon to copy its name. A
-compact strip at the bottom of the grid shows the icons related to the current
-one.
+Search by name, keyword or category, then click an icon to select it. The strip
+at the bottom of the grid shows the related icons and a copy button.
 
 Svelte 5 + Vite + TypeScript. No UI framework, no CSS framework.
 
@@ -37,12 +36,16 @@ npm run probe -- q  # try a query from the terminal
 | ---------------- | ---------------------------------------------- |
 | `/` · `Ctrl/⌘ K` | focus search                                  |
 | `↑ ↓ ← →`        | move through the grid                         |
-| `Enter`          | copy the highlighted icon                      |
+| `Enter`          | select the highlighted icon                   |
 | `C`              | copy the selected icon name                   |
 | `Esc`            | close the related strip, then clear the search |
 
+Clicking an icon **selects** it, it does not copy it — with a related strip on
+screen, "click" is not always "I want to copy this". Copying is an explicit
+step: the copy button in the related strip, or `C`.
+
 Arrow keys move the DOM focus along with the selection, so `Enter` always
-copies the icon you are standing on — not the one you clicked last. The grid
+acts on the icon you are standing on — not the one you clicked last. The grid
 uses a roving tabindex, so `Tab` never walks through 1,010 buttons.
 
 The search state lives in the URL (`?q=&cat=&icon=`), so results are shareable
@@ -134,8 +137,10 @@ the matched prefix for a prefix match.
 
 ### Related strip
 
-The strip at the bottom of the grid is driven by a precomputed `related` map.
-Evidence is ranked by how specific it is:
+The strip at the bottom of the grid starts with the selected icon itself
+(highlighted), then a divider, then the related icons. It is driven by a
+precomputed `related` map, and it is **not** alphabetical — the order is
+deliberate, by how specific the evidence is:
 
 1. an explicit relation (`accept` → `tick`, `cross`, `cancel`, `stop`)
 2. the icons a name segment points at on its own (`folder_add` → the `folder`
@@ -146,7 +151,20 @@ Evidence is ranked by how specific it is:
 5. the rest of the category, so the strip is never empty
 
 Steps 1 and 2 exist because a name like `accept` or `gun` has no family of its
-own — without them the strip was blank.
+own — without them the strip was blank. Within one step the icons are
+alphabetical, so the order is stable.
+
+### The grid is virtualised
+
+The result list is windowed: only the rows around the scroll position are in
+the DOM (~120 tiles instead of 1,010), and a spacer of the full height keeps
+the scrollbar honest. The row pitch is measured from the layout, so the
+scrollbar thumb stays the same size the whole way down — the previous
+infinite-scroll version grew the content as you moved, which made the thumb
+shrink while you scrolled.
+
+To keep the rows uniform (and therefore virtualisable) the name block always
+reserves two lines, even for short names.
 
 ## Performance
 

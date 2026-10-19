@@ -10,6 +10,8 @@
     | 'sparkle'
     | 'reset'
     | 'copy-all'
+    | 'chevron-left'
+    | 'chevron-right'
     | 'alert';
 
   const PATHS: Record<GlyphName, string> = {
@@ -23,6 +25,8 @@
     sparkle: 'M8 2.5 9.2 6 12.5 7.2 9.2 8.4 8 11.9 6.8 8.4 3.5 7.2 6.8 6 8 2.5Z',
     reset: 'M3 8a5 5 0 1 0 1.6-3.7M3 3v3h3',
     'copy-all': 'M5.5 5.5V4A1.5 1.5 0 0 1 7 2.5h4A1.5 1.5 0 0 1 12.5 4v4A1.5 1.5 0 0 1 11 9.5H9.5M4 7.5A1.5 1.5 0 0 1 5.5 6h4A1.5 1.5 0 0 1 11 7.5v4A1.5 1.5 0 0 1 9.5 13h-4A1.5 1.5 0 0 1 4 11.5v-4Z',
+    'chevron-left': 'M9.5 4 5.5 8l4 4',
+    'chevron-right': 'M6.5 4l4 4-4 4',
     alert: 'M8 5.5v3.5M8 11.5h.01M6.85 2.9 1.9 11.2A1.4 1.4 0 0 0 3.1 13.3h9.8a1.4 1.4 0 0 0 1.2-2.1L9.15 2.9a1.4 1.4 0 0 0-2.3 0Z',
   };
 </script>

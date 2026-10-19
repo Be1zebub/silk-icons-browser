@@ -121,6 +121,7 @@
   .name {
     display: -webkit-box;
     width: 100%;
+    min-height: calc(2 * 0.9375rem);
     overflow: hidden;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;

@@ -144,13 +144,12 @@
     }
 
     if (event.key === 'Enter' && !onButton) {
-      // Enter copies the highlighted icon, or the top hit when nothing is
-      // highlighted yet — the single most common "find and grab it" flow.
+      // Enter picks the highlighted icon; the related strip then offers the
+      // copy button. Clicking never copies on its own.
       const name = selectedName ?? catalogState.hits[0]?.icon.name;
       if (name) {
         event.preventDefault();
         selectedName = name;
-        activate(name);
       }
       return;
     }
@@ -165,7 +164,6 @@
 
   function selectRelated(name: string): void {
     selectedName = name;
-    activate(name);
   }
 
   const entry = $derived<IconDoc | null>(selected);
@@ -251,7 +249,8 @@
       <p class="hints">
         <Kbd keys="/" /> search <span class="dot">·</span>
         <Kbd keys="↑↓" /> browse <span class="dot">·</span>
-        <Kbd keys="⏎" /> copy
+        <Kbd keys="⏎" /> select <span class="dot">·</span>
+        <Kbd keys="C" /> copy
       </p>
     </div>
 
@@ -266,7 +265,6 @@
         copied={copiedName}
         {tileMin}
         onselect={(name) => (selectedName = name)}
-        onactivate={activate}
       />
     {/if}
 
@@ -274,6 +272,7 @@
       <RelatedBar
         icon={entry}
         onselect={selectRelated}
+        oncopy={activate}
         onclose={() => (selectedName = null)}
       />
     {/if}

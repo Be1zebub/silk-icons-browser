@@ -7,16 +7,30 @@
   interface Props {
     icon: IconDoc;
     onselect: (name: string) => void;
+    oncopy: (name: string) => void;
     onclose: () => void;
   }
 
-  let { icon, onselect, onclose }: Props = $props();
+  let { icon, onselect, oncopy, onclose }: Props = $props();
 
   const related = $derived(relatedIcons(icon, searchIndex));
 </script>
 
 <div class="related-bar" role="group" aria-label="Related icons">
   <div class="strip">
+    <button
+      type="button"
+      class="item self"
+      title={icon.name}
+      aria-label={icon.name}
+      aria-current="true"
+      onclick={() => onselect(icon.name)}
+    >
+      <i class="silk {icon.name}"></i>
+    </button>
+
+    <span class="divider" aria-hidden="true"></span>
+
     {#each related as item (item.name)}
       <button
         type="button"
@@ -30,15 +44,27 @@
     {/each}
   </div>
 
-  <button
-    type="button"
-    class="close"
-    title="Hide related icons"
-    aria-label="Hide related icons"
-    onclick={onclose}
-  >
-    <Glyph name="close" size={13} />
-  </button>
+  <div class="actions">
+    <button
+      type="button"
+      class="action"
+      title={`Copy ${icon.name}`}
+      aria-label={`Copy ${icon.name}`}
+      onclick={() => oncopy(icon.name)}
+    >
+      <Glyph name="copy" size={13} />
+    </button>
+
+    <button
+      type="button"
+      class="action"
+      title="Hide related icons"
+      aria-label="Hide related icons"
+      onclick={onclose}
+    >
+      <Glyph name="close" size={13} />
+    </button>
+  </div>
 </div>
 
 <style>
@@ -68,6 +94,14 @@
     display: none;
   }
 
+  .divider {
+    flex: none;
+    width: 1px;
+    height: 1.25rem;
+    margin: 0 0.375rem;
+    background-color: color-mix(in oklab, var(--border) 40%, transparent);
+  }
+
   .item {
     display: inline-flex;
     flex: none;
@@ -93,7 +127,19 @@
     background-color: color-mix(in oklab, var(--input) 14%, transparent);
   }
 
-  .close {
+  .item.self {
+    border-color: color-mix(in oklab, var(--primary) 40%, transparent);
+    background-color: color-mix(in oklab, var(--primary) 14%, transparent);
+  }
+
+  .actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .action {
     display: inline-flex;
     flex: none;
     width: 1.5rem;
@@ -109,7 +155,7 @@
       color var(--duration) var(--ease);
   }
 
-  .close:hover {
+  .action:hover {
     background-color: color-mix(in oklab, var(--input) 14%, transparent);
     color: var(--foreground);
   }

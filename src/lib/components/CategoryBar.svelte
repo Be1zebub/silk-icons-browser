@@ -1,5 +1,8 @@
 <script lang="ts">
+  import Glyph from './Glyph.svelte';
   import type { CategoryId, CategoryMeta } from '../core/types';
+
+  const SCROLL_STEP = 240;
 
   interface Props {
     categories: readonly CategoryMeta[];
@@ -13,20 +16,20 @@
 
   let scroller = $state<HTMLElement | null>(null);
 
-  let scrollable = $state(false);
-  let atStart = $state(true);
-  let atEnd = $state(false);
+  let canScrollLeft = $state(false);
+  let canScrollRight = $state(false);
 
   function measure(): void {
     if (!scroller) return;
+
     const max = scroller.scrollWidth - scroller.clientWidth;
-    scrollable = max > 4;
-    atStart = scroller.scrollLeft <= 2;
-    atEnd = scroller.scrollLeft >= max - 2;
+    canScrollLeft = scroller.scrollLeft > 2;
+    canScrollRight = max > 2 && scroller.scrollLeft < max - 2;
   }
 
-  function onScroll(): void {
-    measure();
+  function scrollBy(direction: 1 | -1): void {
+    if (!scroller) return;
+    scroller.scrollBy({ left: direction * SCROLL_STEP, behavior: 'smooth' });
   }
 
   $effect(() => {
@@ -40,7 +43,8 @@
   });
 
   function onWheel(event: WheelEvent): void {
-    if (!scroller || !scrollable) return;
+    if (!scroller) return;
+    if (!canScrollLeft && !canScrollRight) return;
 
     const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
     if (delta === 0) return;
@@ -50,12 +54,24 @@
   }
 </script>
 
-<div class="bar" data-at-start={atStart}>
+<div class="bar">
+  {#if canScrollLeft}
+    <button
+      type="button"
+      class="nav"
+      aria-label="Scroll categories left"
+      title="Scroll left"
+      onclick={() => scrollBy(-1)}
+    >
+      <Glyph name="chevron-left" size={13} />
+    </button>
+  {/if}
+
   <div
     class="track"
     bind:this={scroller}
     onwheel={onWheel}
-    onscroll={onScroll}
+    onscroll={measure}
     role="group"
     aria-label="Filter by category"
   >
@@ -84,29 +100,52 @@
     {/each}
   </div>
 
-  {#if scrollable && !atEnd}
-    <span class="fade" aria-hidden="true"></span>
+  {#if canScrollRight}
+    <button
+      type="button"
+      class="nav"
+      aria-label="Scroll categories right"
+      title="Scroll right"
+      onclick={() => scrollBy(1)}
+    >
+      <Glyph name="chevron-right" size={13} />
+    </button>
   {/if}
 </div>
 
 <style>
   .bar {
-    position: relative;
+    display: flex;
     min-width: 0;
+    align-items: center;
+    gap: 0.25rem;
   }
 
-  .fade {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 1px;
-    width: 2.5rem;
-    background: linear-gradient(to right, transparent, var(--background) 70%);
-    pointer-events: none;
+  .nav {
+    display: inline-flex;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid color-mix(in oklab, var(--border) 12%, transparent);
+    border-radius: var(--radius-md);
+    background-color: color-mix(in oklab, var(--input) 8%, transparent);
+    color: var(--muted-foreground);
+    transition:
+      background-color var(--duration) var(--ease),
+      color var(--duration) var(--ease);
+  }
+
+  .nav:hover {
+    background-color: color-mix(in oklab, var(--input) 16%, transparent);
+    color: var(--foreground);
   }
 
   .track {
     display: flex;
+    flex: 1;
+    min-width: 0;
     align-items: center;
     gap: 0.25rem;
     overflow-x: auto;
