@@ -23,7 +23,7 @@ Built for developers who want clean tools without bloat.
   scrollbar thumb stays the same size all the way down.
 - **A related strip** — pick an icon, get its family, ranked by how specific
   the evidence is.
-- **Copy name / Copy class / Copy rule / Copy PNG.**
+- **Copy name / Copy PNG.**
 - **A global popularity counter** — per icon name, no identifier, no IP, no
   timestamp. It comes back as the **Popular** category.
 

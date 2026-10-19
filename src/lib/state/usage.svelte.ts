@@ -8,11 +8,13 @@ import {
 } from "../core/usage"
 
 /**
- * Where the global counter lives. The Pages Function in `functions/api/usage`
- * answers on the same origin, so this works out of the box on Cloudflare
- * Pages. Point it somewhere else with VITE_USAGE_ENDPOINT.
+ * Where the global counter lives. The Worker answers on the same origin, so
+ * this works out of the box in production. The Vite dev server has no such
+ * endpoint, so there it is off unless one is set explicitly.
  */
-const ENDPOINT = (import.meta.env.VITE_USAGE_ENDPOINT as string | undefined) ?? "/api/usage"
+const ENDPOINT =
+	(import.meta.env.VITE_USAGE_ENDPOINT as string | undefined) ??
+	(import.meta.env.DEV ? null : "/api/usage")
 
 /** How often the pending copies are flushed to the server. */
 const SYNC_INTERVAL = 30_000
@@ -83,7 +85,7 @@ class UsageState {
 		// Flush the last copies when the page goes away. `keepalive` lets the
 		// request outlive the page.
 		const flush = () => {
-			if (this.#pending.size === 0) return
+			if (!ENDPOINT || this.#pending.size === 0) return
 
 			const counts = Object.fromEntries(this.#pending)
 			this.#pending.clear()
@@ -109,6 +111,8 @@ class UsageState {
 
 	/** Fetches the global ranking. Silently does nothing when there is none. */
 	async refresh(): Promise<void> {
+		if (!ENDPOINT) return
+
 		const counts = await fetchGlobalCounts(ENDPOINT)
 		if (Object.keys(counts).length === 0) return
 
@@ -118,7 +122,7 @@ class UsageState {
 
 	/** Sends the copies made since the last flush. */
 	async sync(): Promise<void> {
-		if (this.#pending.size === 0) return
+		if (!ENDPOINT || this.#pending.size === 0) return
 
 		const counts = Object.fromEntries(this.#pending)
 		this.#pending.clear()
