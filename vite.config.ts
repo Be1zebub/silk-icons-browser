@@ -41,6 +41,9 @@ function silkAssets(): Plugin {
 }
 
 export default defineConfig({
+  // Relative asset paths, so the build works from a domain root and from a
+  // sub path (Cloudflare Pages projects, GitHub Pages, a preview branch).
+  base: './',
   plugins: [silkAssets(), svelte()],
   server: {
     host: true,
@@ -50,5 +53,7 @@ export default defineConfig({
   build: {
     target: 'es2022',
     cssTarget: 'chrome111',
+    assetsInlineLimit: 4096,
+    chunkSizeWarningLimit: 700,
   },
 });

@@ -1,0 +1,214 @@
+<!doctype html>
+<!--
+  Source of public/og.png. Rendered by scripts/build-og.mjs, which rasterises
+  this file with a headless browser. The PNG is committed, so a release build
+  never needs a browser.
+-->
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link
+			rel="stylesheet"
+			href="../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2"
+		/>
+		<link rel="stylesheet" href="../src/lib/styles/silk.css" />
+		<style>
+			@font-face {
+				font-family: "Inter";
+				font-style: normal;
+				font-display: block;
+				font-weight: 100 900;
+				src: url("../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2")
+					format("woff2-variations");
+			}
+
+			* {
+				box-sizing: border-box;
+				margin: 0;
+			}
+
+			body {
+				width: 1200px;
+				height: 630px;
+				overflow: hidden;
+				background: #0b0b0d;
+				color: #f4f4f5;
+				font-family: "Inter", system-ui, sans-serif;
+				-webkit-font-smoothing: antialiased;
+			}
+
+			.frame {
+				position: relative;
+				display: flex;
+				width: 1200px;
+				height: 630px;
+				padding: 72px 76px;
+				gap: 56px;
+				background:
+					radial-gradient(900px 460px at 82% -10%, #1b2740 0%, transparent 62%),
+					radial-gradient(700px 420px at 8% 110%, #171a24 0%, transparent 60%);
+			}
+
+			.frame::after {
+				content: "";
+				position: absolute;
+				inset: 0;
+				background-image: radial-gradient(
+					circle at 1px 1px,
+					rgba(255, 255, 255, 0.055) 1px,
+					transparent 0
+				);
+				background-size: 28px 28px;
+				mask-image: radial-gradient(900px 520px at 70% 20%, #000 20%, transparent 78%);
+			}
+
+			.copy {
+				position: relative;
+				z-index: 1;
+				display: flex;
+				flex: 1;
+				flex-direction: column;
+				justify-content: center;
+				gap: 22px;
+			}
+
+			.title {
+				display: flex;
+				align-items: center;
+				gap: 20px;
+			}
+
+			.mark {
+				display: inline-flex;
+				width: 68px;
+				height: 68px;
+				align-items: center;
+				justify-content: center;
+				border: 1px solid rgba(255, 255, 255, 0.14);
+				border-radius: 18px;
+				background: rgba(59, 130, 246, 0.16);
+			}
+
+			.mark .silk {
+				--silk-size: 38px;
+				image-rendering: pixelated;
+			}
+
+			h1 {
+				font-size: 84px;
+				font-weight: 620;
+				letter-spacing: -0.05em;
+				line-height: 1;
+			}
+
+			p {
+				max-width: 30rem;
+				font-size: 25px;
+				font-weight: 400;
+				line-height: 1.38;
+				color: rgba(244, 244, 245, 0.58);
+			}
+
+			.search {
+				display: flex;
+				width: 100%;
+				max-width: 30rem;
+				height: 62px;
+				align-items: center;
+				gap: 14px;
+				padding: 0 20px;
+				border: 1px solid rgba(255, 255, 255, 0.13);
+				border-radius: 14px;
+				background: rgba(255, 255, 255, 0.045);
+			}
+
+			.search svg {
+				flex: none;
+				color: rgba(244, 244, 245, 0.4);
+			}
+
+			.search b {
+				font-size: 25px;
+				font-weight: 450;
+				color: #f4f4f5;
+			}
+
+			.search em {
+				margin-left: auto;
+				font-size: 19px;
+				font-style: normal;
+				color: rgba(244, 244, 245, 0.42);
+			}
+
+			.grid {
+				position: relative;
+				z-index: 1;
+				display: grid;
+				width: 470px;
+				grid-template-columns: repeat(5, 1fr);
+				gap: 12px;
+				align-content: center;
+			}
+
+			.grid div {
+				display: flex;
+				height: 84px;
+				align-items: center;
+				justify-content: center;
+				border: 1px solid rgba(255, 255, 255, 0.075);
+				border-radius: 16px;
+				background: rgba(255, 255, 255, 0.03);
+			}
+
+			.grid .silk {
+				--silk-size: 34px;
+				image-rendering: pixelated;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="frame">
+			<div class="copy">
+				<div class="title">
+					<span class="mark"><i class="silk application_view_gallery"></i></span>
+					<h1>Silk</h1>
+				</div>
+				<p>
+					Search, inspect and copy the 1,010 FamFamFam Silk icons — fast,
+					and entirely in the browser.
+				</p>
+				<div class="search">
+					<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+						<circle cx="11" cy="11" r="7" />
+						<path d="m20 20-3.5-3.5" />
+					</svg>
+					<b>folder</b>
+					<em>28 icons</em>
+				</div>
+			</div>
+
+			<div class="grid">
+				<div><i class="silk accept"></i></div>
+				<div><i class="silk add"></i></div>
+				<div><i class="silk anchor"></i></div>
+				<div><i class="silk application"></i></div>
+				<div><i class="silk arrow_down"></i></div>
+				<div><i class="silk bin"></i></div>
+				<div><i class="silk bookmark"></i></div>
+				<div><i class="silk calendar"></i></div>
+				<div><i class="silk cog"></i></div>
+				<div><i class="silk email"></i></div>
+				<div><i class="silk folder"></i></div>
+				<div><i class="silk heart"></i></div>
+				<div><i class="silk lock"></i></div>
+				<div><i class="silk magnifier"></i></div>
+				<div><i class="silk money"></i></div>
+				<div><i class="silk printer"></i></div>
+				<div><i class="silk star"></i></div>
+				<div><i class="silk user"></i></div>
+				<div><i class="silk wrench"></i></div>
+				<div><i class="silk zoom_in"></i></div>
+			</div>
+		</div>
+	</body>
+</html>

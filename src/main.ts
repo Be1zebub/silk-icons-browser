@@ -1,11 +1,11 @@
-import { mount } from 'svelte';
-import './app.css';
-import App from './App.svelte';
+import { mount } from "svelte"
+import "./app.css"
+import Root from "./Root.svelte"
 
-const target = document.getElementById('app');
+const target = document.getElementById("app")
 
 if (!target) {
-  throw new Error('Missing #app mount node');
+	throw new Error("Missing #app mount node")
 }
 
-export default mount(App, { target });
+export default mount(Root, { target })

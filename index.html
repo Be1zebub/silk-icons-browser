@@ -1,39 +1,65 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="color-scheme" content="dark light" />
-    <meta
-      name="description"
-      content="Silk — a fast, keyboard-driven browser for the 1010 FamFamFam Silk icons. Search, inspect at scale, and copy names, CSS classes or rules."
-    />
-    <meta name="robots" content="index, follow" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Silk — icon search" />
-    <meta
-      property="og:description"
-      content="Search, inspect at scale and copy FamFamFam Silk icon names."
-    />
-    <meta name="twitter:card" content="summary" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>Silk — FamFamFam icon search</title>
-    <script>
-      // Applied before first paint so the theme never flashes.
-      try {
-        var saved = localStorage.getItem('silk.theme');
-        var resolved =
-          !saved || saved === 'system'
-            ? window.matchMedia('(prefers-color-scheme: light)').matches
-              ? 'light'
-              : 'dark'
-            : saved;
-        document.documentElement.dataset.theme = resolved;
-      } catch (_) {}
-    </script>
-  </head>
-  <body>
-    <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
-  </body>
+	<head>
+		<meta charset="utf-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1, viewport-fit=cover"
+		/>
+		<meta name="color-scheme" content="dark light" />
+		<meta name="theme-color" content="#0b0b0d" />
+		<meta
+			name="description"
+			content="Silk Icons Browser — a fast, keyboard-driven browser for the 1010 FamFamFam Silk icons. Search, inspect at scale, and copy names, CSS classes or rules."
+		/>
+		<meta name="robots" content="index, follow" />
+
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Silk" />
+		<meta property="og:title" content="Silk Icons Browser" />
+		<meta
+			property="og:description"
+			content="Search, inspect at scale and copy 1010 FamFamFam Silk icon names."
+		/>
+		<meta property="og:image" content="%VITE_SITE_URL%og.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="Silk, a browser for the FamFamFam Silk icon set" />
+
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content="Silk Icons Browser" />
+		<meta
+			name="twitter:description"
+			content="Search, inspect at scale and copy 1010 FamFamFam Silk icon names."
+		/>
+		<meta name="twitter:image" content="%VITE_SITE_URL%og.png" />
+
+		<link rel="icon" type="image/png" href="./favicon.png" />
+		<link rel="apple-touch-icon" href="./favicon.png" />
+		<title>Silk Icons Browser</title>
+		<script>
+			// Applied before first paint so the theme never flashes.
+			try {
+				var saved = localStorage.getItem("silk.theme")
+				var resolved =
+					!saved || saved === "system"
+						? window.matchMedia("(prefers-color-scheme: light)").matches
+							? "light"
+							: "dark"
+						: saved
+				document.documentElement.dataset.theme = resolved
+			} catch (_) {}
+		</script>
+	</head>
+	<body>
+		<div id="app"></div>
+		<noscript>
+			<p style="padding: 2rem; font-family: system-ui, sans-serif">
+				Silk searches a catalog of 1,010 icons in the browser, so it needs
+				JavaScript. The artwork itself comes from
+				<a href="https://www.famfamfam.com/lab/icons/silk/">FamFamFam</a>.
+			</p>
+		</noscript>
+		<script type="module" src="/src/main.ts"></script>
+	</body>
 </html>
