@@ -5,10 +5,10 @@
  * identifier, no IP, no referrer, no timestamp. The counts stay in
  * localStorage, so the ranking is per browser.
  *
- * If an endpoint is configured, the counts are also posted there (fire and
- * forget, no cookies, no identifiers) so the ranking can be global.
+ * Sending them somewhere is the job of the reactive wrapper, which batches
+ * the copies and posts them in one request.
  *
- * `popular()` is the hook for the future "Popular" category.
+ * `popular()` is the hook for the "Popular" category.
  */
 
 const STORAGE_KEY = "silk.usage.v1"
@@ -68,11 +68,9 @@ export class LocalUsageStorage implements UsageStorage {
 export class UsageCounter {
 	#counts: Record<string, number>
 	#storage: UsageStorage
-	#endpoint: string | undefined
 
-	constructor(storage: UsageStorage, endpoint?: string) {
+	constructor(storage: UsageStorage) {
 		this.#storage = storage
-		this.#endpoint = endpoint
 		this.#counts = storage.read()
 	}
 
@@ -89,20 +87,6 @@ export class UsageCounter {
 		}
 
 		this.#storage.write(this.#counts)
-		this.#send(name)
-	}
-
-	#send(name: string): void {
-		if (!this.#endpoint || typeof navigator === "undefined") return
-
-		try {
-			navigator.sendBeacon(
-				this.#endpoint,
-				new Blob([JSON.stringify({ icon: name })], { type: "application/json" }),
-			)
-		} catch {
-			// Beacon is best effort.
-		}
 	}
 
 	countOf(name: string): number {
@@ -126,4 +110,66 @@ export class UsageCounter {
 		this.#counts = {}
 		this.#storage.write(this.#counts)
 	}
+}
+
+/**
+ * Fetches the global ranking from the Pages Function. Returns an empty map
+ * when there is no endpoint, it is not deployed, or the network is down.
+ */
+export async function fetchGlobalCounts(
+	endpoint: string,
+	fetchImpl: typeof fetch = fetch,
+): Promise<Record<string, number>> {
+	try {
+		const response = await fetchImpl(endpoint, {
+			headers: { accept: "application/json" },
+			cache: "no-store",
+		})
+		if (!response.ok) return {}
+
+		const body = (await response.json()) as { counts?: unknown }
+		const counts = body.counts
+		if (!counts || typeof counts !== "object") return {}
+
+		const result: Record<string, number> = {}
+		for (const [icon, count] of Object.entries(counts as Record<string, unknown>)) {
+			if (typeof count === "number" && Number.isFinite(count) && count > 0) {
+				result[icon] = Math.floor(count)
+			}
+		}
+
+		return result
+	} catch {
+		return {}
+	}
+}
+
+/** Sends the copies made since the last flush. */
+export async function postCounts(
+	endpoint: string,
+	counts: Record<string, number>,
+	fetchImpl: typeof fetch = fetch,
+): Promise<boolean> {
+	if (Object.keys(counts).length === 0) return true
+
+	try {
+		await fetchImpl(endpoint, {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ counts }),
+			keepalive: true,
+		})
+		return true
+	} catch {
+		return false
+	}
+}
+
+/** Ranks the counts, most copied first. */
+export function rankCounts(counts: Record<string, number>, limit = 64): string[] {
+	return Object.entries(counts)
+		.filter(([, count]) => count > 0)
+		.sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+		.slice(0, limit)
+		.map(([name]) => name)
 }

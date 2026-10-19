@@ -1,31 +1,15 @@
+# Silk Icons Browser
+
+A lightning-fast, keyboard-driven browser for all 1,010 [FamFamFam "Silk"](https://www.famfamfam.com/lab/icons/silk/) icons.
+
+Instantaneous client-side search across categorized sets, flexible pixel-grid scaling (16px to 48px), and single-keystroke asset copying.  
+Built for developers who want clean tools without bloat.
+
 <div align="center">
   <img src="public/og.png" alt="Silk" width="640" />
 </div>
 
-# Silk
-
-A browser for the 1,010 [FamFamFam "Silk"](https://www.famfamfam.com/lab/icons/silk/) icons.
-Search them, look at them at 8×, copy the name, the CSS class, the CSS rule or the
-PNG itself. Everything runs in the browser — there is no server and no network
-traffic.
-
-```
-npm install
-npm run dev
-```
-
-## Keys
-
-| Key | |
-| --- | --- |
-| `/` or `Ctrl/⌘ K` | focus the search |
-| `↑ ↓ ← →` | move through the grid |
-| `Enter` | copy the highlighted icon |
-| `C` | copy the selected icon |
-| `Esc` | close the related strip, then clear the search |
-
-Clicking an icon selects it and opens the related strip at the bottom. Copying
-is a separate, explicit step.
+**Live:** <https://silk.bzbb.dev> · **Source:** <https://github.com/Be1zebub/silk-icons-browser>
 
 ## What is in here
 
@@ -38,10 +22,11 @@ is a separate, explicit step.
 - **A related strip.** Pick an icon and the strip shows its family, ranked by
   how specific the evidence is.
 - **Copy name / Copy class / Copy rule / Copy PNG.**
-- **A usage counter.** Every copy is counted per icon name — nothing else, no
-  identifier, no IP, no timestamp. The counts stay in `localStorage` and are
-  the hook for a future "Popular" category. Set `VITE_USAGE_ENDPOINT` to also
-  post them somewhere (fire and forget, no cookies).
+- **A global popularity counter.** Every copy is counted per icon name —
+  nothing else, no identifier, no IP, no timestamp. The counts are batched and
+  posted to a Pages Function, stored in KV, and come back as the **Popular**
+  category. Without the KV binding the app still works, it just has no
+  global ranking.
 
 ## Deploying
 
@@ -55,12 +40,29 @@ The build output is a plain static site in `dist/`.
 `public/_headers` already carries the cache rules: hashed assets are immutable
 for a year, the HTML entry point is never cached.
 
-Set `VITE_SITE_URL` (for example `https://silk.example.com`) in the Pages
-environment to make the Open Graph image absolute. Without it the tag stays
-relative, which most crawlers resolve fine.
+`VITE_SITE_URL` is already set to `https://silk.bzbb.dev` in `.env`, which is
+what makes the Open Graph image and the canonical URL absolute. Change it if
+you deploy somewhere else.
+
+### The popularity counter
+
+`functions/api/usage.ts` is a Pages Function that keeps the copy counters in
+a KV namespace:
+
+- `POST /api/usage` with `{ counts: { icon: 3 } }` adds to the counters
+- `GET /api/usage` returns the counters
+
+Create a KV namespace and bind it as `USAGE` in the Pages dashboard
+(Settings → Functions → KV Namespace bindings). Without the binding the
+function answers `204` and drops the data, so the site keeps working and the
+**Popular** category simply does not appear. The client batches its copies and
+flushes them every 30 seconds, so a visitor costs one KV write per batch
+rather than one per copy.
 
 **Anywhere else** — `npm run build` and serve `dist/`. Asset paths are
-relative, so a sub path works too.
+relative, so a sub path works too. The Pages Function needs a KV binding (or
+any endpoint that speaks the same two routes — point `VITE_USAGE_ENDPOINT` at
+it).
 
 ## Commands
 
@@ -71,6 +73,13 @@ npm run check       # svelte-check
 npm test            # unit tests
 npm run bench       # search latency
 npm run probe -- q  # try a query from the terminal
+npm run build:og    # re-render public/og.png (needs the chromium build)
+```
+
+Regenerating the OG image needs a browser:
+
+```
+npx playwright install chromium
 ```
 
 ## How the search works
@@ -97,4 +106,5 @@ Icon artwork by [Mark James](https://www.famfamfam.com/lab/icons/silk/),
 CC BY 2.5. Everything else is MIT.
 
 The visual language is inspired by [Toolcraft](https://github.com/pixel-point/toolcraft)
-by Pixel Point; the interface icons are [Lucide](https://lucide.dev).
+by Pixel Point.  
+The interface icons are [Lucide](https://lucide.dev).

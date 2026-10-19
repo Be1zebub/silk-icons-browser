@@ -1,3 +1,14 @@
 name = "silk-icons-browser"
 compatibility_date = "2026-10-19"
 pages_build_output_dir = "dist"
+
+# The global copy counter lives in a KV namespace. Create one and wire it up in
+# the Cloudflare dashboard (Settings -> Functions -> KV Namespace bindings) or
+# locally with:
+#
+#   npx wrangler kv namespace create USAGE
+#   npx wrangler kv namespace list
+#
+# [[kv_namespaces]]
+# binding = "USAGE"
+# id = "<namespace id>"

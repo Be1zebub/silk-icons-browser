@@ -77,6 +77,7 @@
 
 	/** The results, with the pinned related icon in front. */
 	const displayHits = $derived.by<readonly SearchHit[]>(() => {
+		if (catalogState.category === "popular") return popularHits
 		if (!pinned) return catalogState.hits
 		return [
 			{
@@ -88,6 +89,20 @@
 			},
 			...catalogState.hits,
 		]
+	})
+
+	/** The icons everyone copies the most, as ranked by the Pages Function. */
+	const popularHits = $derived.by<readonly SearchHit[]>(() => {
+		const names = usage.globalPopular
+		const hits: SearchHit[] = []
+
+		for (const name of names) {
+			const icon = catalogState.entries.find((entry) => entry.name === name)
+			if (!icon) continue
+			hits.push({ icon, score: 0, ranges: [], matchedTokens: 0, coverage: 0 })
+		}
+
+		return hits
 	})
 
 	// Theme + URL bootstrap.
@@ -131,6 +146,12 @@
 		catalogState.query
 		catalogState.category
 		pinned = null
+	})
+
+	// Start the usage counter: fetch the global ranking, flush the local one.
+	$effect(() => {
+		usage.start()
+		return () => usage.stop()
 	})
 
 	async function copy(text: string, label: string): Promise<void> {
@@ -367,7 +388,8 @@
 			counts={catalogState.counts}
 			total={catalogState.matched}
 			value={catalogState.category}
-			onchange={(value: CategoryId | "all") => {
+			popular={popularHits.length}
+			onchange={(value: CategoryId | "all" | "popular") => {
 				catalogState.category = value
 			}}
 		/>
@@ -376,7 +398,9 @@
 	<main class="results">
 		<div class="statusbar">
 			<p class="status">
-				{#if hasQuery}
+				{#if catalogState.category === "popular"}
+					<strong>{displayHits.length.toLocaleString("en-US")}</strong> most copied
+				{:else if hasQuery}
 					<strong>{displayHits.length.toLocaleString("en-US")}</strong>
 					result{displayHits.length === 1 ? "" : "s"}
 					<span class="dot">·</span>
@@ -526,12 +550,6 @@
 		margin: 0;
 		font-size: var(--text-2xs);
 		color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
-	}
-
-	@media (max-width: 60rem) {
-		.hints {
-			display: none;
-		}
 	}
 
 	@media (max-width: 52rem) {

@@ -8,11 +8,13 @@
 		categories: readonly CategoryMeta[]
 		counts: Readonly<Record<CategoryId, number>>
 		total: number
-		value: CategoryId | "all"
-		onchange: (value: CategoryId | "all") => void
+		value: CategoryId | "all" | "popular"
+		/** Number of icons in the global popularity ranking, 0 when there is none. */
+		popular: number
+		onchange: (value: CategoryId | "all" | "popular") => void
 	}
 
-	let { categories, counts, total, value, onchange }: Props = $props()
+	let { categories, counts, total, value, popular, onchange }: Props = $props()
 
 	let scroller = $state<HTMLElement | null>(null)
 
@@ -88,6 +90,20 @@
 			All
 			<span class="count">{total}</span>
 		</button>
+
+		{#if popular > 0}
+			<button
+				type="button"
+				class="chip popular"
+				data-active={value === "popular"}
+				aria-pressed={value === "popular"}
+				title="The icons everyone copies the most"
+				onclick={() => onchange("popular")}
+			>
+				Popular
+				<span class="count">{popular}</span>
+			</button>
+		{/if}
 
 		{#each categories as category (category.id)}
 			<button
@@ -192,6 +208,11 @@
 		border-color: color-mix(in oklab, var(--border) 14%, transparent);
 		background-color: color-mix(in oklab, var(--foreground) 9%, transparent);
 		color: var(--foreground);
+	}
+
+	.chip.popular .count {
+		background-color: color-mix(in oklab, var(--primary) 30%, transparent);
+		color: color-mix(in oklab, var(--primary) 85%, var(--foreground));
 	}
 
 	/* A category with no results for the current query recedes. */

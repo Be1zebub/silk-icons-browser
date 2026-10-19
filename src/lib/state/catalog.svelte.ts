@@ -7,7 +7,7 @@ class CatalogState {
 	readonly categories = searchIndex.categories
 
 	query = $state("")
-	category = $state<CategoryId | "all">("all")
+	category = $state<CategoryId | "all" | "popular">("all")
 
 	total = $derived(this.entries.length)
 
@@ -24,15 +24,17 @@ class CatalogState {
 		}),
 	)
 
-	outcome = $derived(() =>
-		this.category === "all"
-			? this.all()
-			: searchIcons({
-					query: this.query,
-					category: this.category,
-					index: searchIndex,
-				}),
-	)
+	outcome = $derived(() => {
+		// "Popular" is not a real category, the app fills those hits itself.
+		if (this.category === "all") return this.all()
+		if (this.category === "popular") return this.all()
+
+		return searchIcons({
+			query: this.query,
+			category: this.category,
+			index: searchIndex,
+		})
+	})
 
 	hits = $derived<readonly SearchHit[]>(this.outcome().hits)
 

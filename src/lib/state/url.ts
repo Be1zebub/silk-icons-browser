@@ -6,7 +6,7 @@ const PARAM_ICON = 'icon';
 
 export interface UrlSnapshot {
   query: string;
-  category: CategoryId | 'all';
+  category: CategoryId | 'all' | 'popular';
   icon: string | null;
 }
 
@@ -23,7 +23,12 @@ export class UrlState {
 
     return {
       query: params.get(PARAM_QUERY) ?? '',
-      category: rawCategory && rawCategory !== 'all' ? (rawCategory as CategoryId) : 'all',
+      category:
+        rawCategory === 'popular'
+          ? 'popular'
+          : rawCategory && rawCategory !== 'all'
+            ? (rawCategory as CategoryId)
+            : 'all',
       icon: params.get(PARAM_ICON),
     };
   }
