@@ -8,13 +8,11 @@ export const TILE_SIZES: readonly TileSize[] = [16, 24, 32, 48];
 interface Prefs {
   theme: ThemePreference;
   tileSize: TileSize;
-  pixelated: boolean;
 }
 
 const DEFAULTS: Prefs = {
   theme: 'system',
   tileSize: 24,
-  pixelated: false,
 };
 
 function isTileSize(value: unknown): value is TileSize {
@@ -34,7 +32,6 @@ function readStored(): Partial<Prefs> {
       result.theme = value['theme'];
     }
     if (isTileSize(value['tileSize'])) result.tileSize = value['tileSize'];
-    if (typeof value['pixelated'] === 'boolean') result.pixelated = value['pixelated'];
 
     return result;
   } catch {
@@ -69,10 +66,6 @@ class PrefsState {
     return this.#prefs.tileSize;
   }
 
-  get pixelated(): boolean {
-    return this.#prefs.pixelated;
-  }
-
   setTheme(theme: ThemePreference): void {
     this.#prefs.theme = theme;
     this.#persist();
@@ -80,11 +73,6 @@ class PrefsState {
 
   setTileSize(size: TileSize): void {
     this.#prefs.tileSize = size;
-    this.#persist();
-  }
-
-  togglePixelated(): void {
-    this.#prefs.pixelated = !this.#prefs.pixelated;
     this.#persist();
   }
 

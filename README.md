@@ -2,8 +2,9 @@
 
 A fast, keyboard-driven browser for the 1,010 icons in the [FamFamFam "Silk" set](https://www.famfamfam.com/lab/icons/silk/).
 
-Search by name, keyword or category, inspect a single icon at 1×–8× with a pixel
-grid, and copy the name, the CSS class or the raw CSS rule.
+Search by name, keyword or category, then click an icon to copy its name. A
+compact strip at the bottom of the grid shows the icons related to the current
+one.
 
 Svelte 5 + Vite + TypeScript. No UI framework, no CSS framework.
 
@@ -19,20 +20,24 @@ Vite on <http://localhost:5178>.
 
 ```bash
 npm run build       # production build into dist/
-npm run preview   # serve the production build
-npm run check     # svelte-check
-npm test          # node:test unit tests for the search core
+npm run preview     # serve the production build
+npm run check       # svelte-check
+npm test            # node:test unit tests for the search core
 ```
 
 ## Keyboard
 
-| Key          | Action                                        |
-| ------------ | --------------------------------------------- |
-| `/` · `Ctrl/⌘ K` | focus search                             |
-| `Enter`      | copy the top result                          |
-| `↑ ↓ ← →`    | move through the grid                        |
-| `C`          | copy the selected icon name                  |
-| `Esc`        | clear the search, then deselect              |
+| Key              | Action                                         |
+| ---------------- | ---------------------------------------------- |
+| `/` · `Ctrl/⌘ K` | focus search                                  |
+| `↑ ↓ ← →`        | move through the grid                         |
+| `Enter`          | copy the highlighted icon                      |
+| `C`              | copy the selected icon name                   |
+| `Esc`            | close the related strip, then clear the search |
+
+Arrow keys move the DOM focus along with the selection, so `Enter` always
+copies the icon you are standing on — not the one you clicked last. The grid
+uses a roving tabindex, so `Tab` never walks through 1,010 buttons.
 
 The search state lives in the URL (`?q=&cat=&icon=`), so results are shareable
 and the back button works.
@@ -74,12 +79,11 @@ Transport, Web, Status, Misc), so nothing leaks into a catch-all bucket.
 
 ## Scaling
 
-The grid preview size (16 / 24 / 32 / 48 px) and the inspector zoom (1× / 2× /
-4× / 8×) both scale the spritesheet proportionally — `--silk-size` drives
-`background-size` and `background-position` together, so an icon never bleeds
-into a neighbouring cell. At 4× and above the inspector draws a pixel grid so
-you can judge a 16×16 icon at real detail, and the scaling mode toggles between
-bilinear (`Smooth`) and nearest-neighbour (`Crisp`) resampling.
+The grid preview size (16 / 24 / 32 / 48 px) scales the spritesheet
+proportionally — `--silk-size` drives `background-size` and
+`background-position` together, so an icon never bleeds into a neighbouring
+cell. Rendering is always `pixelated`: these are 16×16 pixel assets, and
+nearest-neighbour keeps the pixels square instead of smearing them.
 
 ## Layout
 
@@ -91,7 +95,7 @@ scripts/
 ├─ build-sprite.mjs            repacks + re-encodes the sheet, writes silk.css
 └─ build-catalog.mjs           catalog.json generator (categories + synonyms)
 src/
-├─ App.svelte                  shell: header, category bar, results, inspector
+├─ App.svelte                  shell: header, category bar, results, related strip
 ├─ app.css                     design tokens + base styles
 ├─ assets/famfamfam/sprite.png generated spritesheet
 └─ lib/

@@ -2,7 +2,7 @@
   import SearchField from './lib/components/SearchField.svelte';
   import CategoryBar from './lib/components/CategoryBar.svelte';
   import IconGrid from './lib/components/IconGrid.svelte';
-  import Inspector from './lib/components/Inspector.svelte';
+  import RelatedBar from './lib/components/RelatedBar.svelte';
   import EmptyState from './lib/components/EmptyState.svelte';
   import Toaster from './lib/components/Toaster.svelte';
   import Button from './lib/components/ui/Button.svelte';
@@ -80,8 +80,7 @@
     if (!selectedName) return;
     if (catalogState.hits.some((hit) => hit.icon.name === selectedName)) return;
 
-    const first = catalogState.hits[0]?.icon.name ?? null;
-    selectedName = first;
+    selectedName = catalogState.hits[0]?.icon.name ?? null;
   });
 
   async function copy(text: string, label: string): Promise<void> {
@@ -109,23 +108,20 @@
     toasts.show(`Theme: ${THEME_LABEL[next]}`, 'default', 1200);
   }
 
-  function copyResults(): void {
-    const names = catalogState.hits.map((hit) => hit.icon.name);
-    if (names.length === 0) return;
-    void copy(names.join('\n'), `${names.length} names`);
-  }
-
   function handleKeydown(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
     const typing =
       !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable);
+    const onButton = target?.tagName === 'BUTTON';
 
     const arrow = ARROW_KEYS[event.key];
     // Up/Down drive the grid even while the search field has focus; left/right
-    // stay in the text so the caret keeps working.
+    // stay in the text so the caret keeps working. When the grid already owns
+    // the focus, the DOM focus follows the selection so Enter hits the
+    // highlighted tile rather than the last one that was clicked.
     if (arrow && (!typing || arrow === 'up' || arrow === 'down')) {
       event.preventDefault();
-      grid?.move(arrow);
+      grid?.move(arrow, !typing);
       return;
     }
 
@@ -147,19 +143,19 @@
       return;
     }
 
-    if (event.key === 'Enter' && typing) {
+    if (event.key === 'Enter' && !onButton) {
       // Enter copies the highlighted icon, or the top hit when nothing is
       // highlighted yet — the single most common "find and grab it" flow.
-      const target = selectedName ?? catalogState.hits[0]?.icon.name;
-      if (target) {
+      const name = selectedName ?? catalogState.hits[0]?.icon.name;
+      if (name) {
         event.preventDefault();
-        selectedName = target;
-        activate(target);
+        selectedName = name;
+        activate(name);
       }
       return;
     }
 
-    if (typing) return;
+    if (typing || onButton) return;
 
     if (event.key.toLowerCase() === 'c' && selectedName) {
       event.preventDefault();
@@ -169,7 +165,7 @@
 
   function selectRelated(name: string): void {
     selectedName = name;
-    catalogState.query = name;
+    activate(name);
   }
 
   const entry = $derived<IconEntry | null>(selected);
@@ -179,14 +175,6 @@
 
 <div class="shell">
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Silk home">
-      <span class="brand-mark" aria-hidden="true"><i class="silk application_view_gallery"></i></span>
-      <span class="brand-text">
-        <strong>Silk</strong>
-        <small>FamFamFam icon search</small>
-      </span>
-    </a>
-
     <div class="search-slot">
       <SearchField
         bind:this={search}
@@ -241,76 +229,51 @@
     />
   </div>
 
-  <div class="body" data-inspector={selected !== null}>
-    <main class="results">
-      <div class="statusbar">
-        <p class="status">
-          {#if hasQuery}
-            <strong>{catalogState.hits.length.toLocaleString('en-US')}</strong> result{catalogState.hits.length === 1 ? '' : 's'}
-            <span class="dot">·</span>
-            {catalogState.outcome().duration.toFixed(1)} ms
-          {:else if catalogState.category !== 'all'}
-            <strong>{catalogState.hits.length.toLocaleString('en-US')}</strong> in category
-          {:else}
-            <strong>{catalogState.total.toLocaleString('en-US')}</strong> icons · <span class="dot">·</span> click to copy
-          {/if}
-        </p>
+  <main class="results">
+    <div class="statusbar">
+      <p class="status">
+        {#if hasQuery}
+          <strong>{catalogState.hits.length.toLocaleString('en-US')}</strong> result{catalogState.hits.length === 1 ? '' : 's'}
+          <span class="dot">·</span>
+          {catalogState.outcome().duration.toFixed(1)} ms
+        {:else if catalogState.category !== 'all'}
+          <strong>{catalogState.hits.length.toLocaleString('en-US')}</strong> in category
+        {:else}
+          <strong>{catalogState.total.toLocaleString('en-US')}</strong> icons
+        {/if}
+      </p>
 
-        <div class="status-actions">
-          <p class="hints">
-            <Kbd keys="/" /> search <span class="dot">·</span>
-            <Kbd keys="↑↓" /> browse <span class="dot">·</span>
-            <Kbd keys="⏎" /> copy
-          </p>
-          <Button
-            variant="ghost-muted"
-            size="xs"
-            label="Copy every result name"
-            disabled={catalogState.hits.length === 0}
-            onclick={copyResults}
-          >
-            <Glyph name="copy-all" size={12} />
-            Copy all
-          </Button>
-        </div>
-      </div>
+      <p class="hints">
+        <Kbd keys="/" /> search <span class="dot">·</span>
+        <Kbd keys="↑↓" /> browse <span class="dot">·</span>
+        <Kbd keys="⏎" /> copy
+      </p>
+    </div>
 
-      {#if catalogState.hits.length === 0}
-        <EmptyState query={catalogState.query} onreset={reset} />
-      {:else}
-        <IconGrid
-          bind:this={grid}
-          hits={catalogState.hits}
-          tileSize={prefs.tileSize}
-          pixelated={prefs.pixelated}
-          selected={selectedName}
-          copied={copiedName}
-          {tileMin}
-          onselect={(name) => (selectedName = name)}
-          onactivate={activate}
-        />
-      {/if}
-    </main>
+    {#if catalogState.hits.length === 0}
+      <EmptyState query={catalogState.query} onreset={reset} />
+    {:else}
+      <IconGrid
+        bind:this={grid}
+        hits={catalogState.hits}
+        tileSize={prefs.tileSize}
+        selected={selectedName}
+        copied={copiedName}
+        {tileMin}
+        onselect={(name) => (selectedName = name)}
+        onactivate={activate}
+      />
+    {/if}
 
     {#if entry}
-      <button
-        type="button"
-        class="sheet-backdrop"
-        aria-label="Close details"
-        onclick={() => (selectedName = null)}
-      ></button>
-      <Inspector
+      <RelatedBar
         icon={entry}
         entries={catalogState.entries}
-        categories={catalogState.categories}
-        pixelated={prefs.pixelated}
-        oncopy={copy}
-        ontogglepixelated={() => prefs.togglePixelated()}
         onselect={selectRelated}
         onclose={() => (selectedName = null)}
       />
     {/if}
-  </div>
+  </main>
 </div>
 
 <Toaster />
@@ -324,9 +287,8 @@
   }
 
   .topbar {
-    display: grid;
+    display: flex;
     flex: none;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 1rem;
     height: 3.5rem;
@@ -334,64 +296,23 @@
     border-bottom: 1px solid color-mix(in oklab, var(--border) 45%, transparent);
   }
 
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    justify-self: start;
-    color: inherit;
-    text-decoration: none;
-  }
-
-  .brand-mark {
-    display: inline-flex;
-    width: 1.75rem;
-    height: 1.75rem;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid color-mix(in oklab, var(--border) 14%, transparent);
-    border-radius: var(--radius-lg);
-    background-color: color-mix(in oklab, var(--primary) 14%, transparent);
-  }
-
-  .brand-mark :global(.silk) {
-    --silk-size: 16px;
-  }
-
-  .brand-text {
-    display: flex;
-    flex-direction: column;
-    line-height: 1.125rem;
-  }
-
-  .brand-text strong {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    letter-spacing: -0.01em;
-  }
-
-  .brand-text small {
-    font-size: var(--text-2xs);
-    color: var(--muted-foreground);
-  }
-
   .search-slot {
     display: flex;
-    justify-content: center;
+    flex: 1;
     min-width: 0;
+    max-width: 42rem;
   }
 
-  .search-slot :global(.field),
-  .search-slot :global(.summary) {
+  .search-slot :global(.field) {
     width: 100%;
-    max-width: 26rem;
   }
 
   .tools {
     display: flex;
+    flex: none;
     align-items: center;
     gap: 0.5rem;
-    justify-self: end;
+    margin-left: auto;
   }
 
   .size-option {
@@ -399,6 +320,10 @@
     align-items: center;
     gap: 0.3125rem;
     line-height: 1;
+  }
+
+  .size-option :global(.silk) {
+    image-rendering: pixelated;
   }
 
   .filters {
@@ -412,12 +337,6 @@
 
   .filters :global(.bar) {
     width: 100%;
-  }
-
-  .body {
-    display: flex;
-    min-height: 0;
-    flex: 1;
   }
 
   .results {
@@ -455,12 +374,6 @@
     opacity: 0.5;
   }
 
-  .status-actions {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-
   .hints {
     display: flex;
     align-items: center;
@@ -469,94 +382,37 @@
     color: color-mix(in oklab, var(--muted-foreground) 80%, transparent);
   }
 
-  :global(.body > :global(.inspector)) {
-    overflow-y: auto;
-  }
-
   @media (max-width: 60rem) {
-    .brand-text small {
-      display: none;
-    }
-
     .hints {
       display: none;
     }
   }
 
-  .sheet-backdrop {
-    display: none;
-  }
-
-  @keyframes silk-sheet {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
-
   @media (max-width: 52rem) {
     .topbar {
-      grid-template-columns: auto minmax(0, 1fr);
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
       grid-template-areas:
-        'brand tools'
-        'search search';
-      gap: 0.5rem 0.75rem;
+        'search search'
+        'tools tools';
+      gap: 0.5rem;
       height: auto;
       padding: 0.5rem 0.75rem;
     }
 
-    .brand {
-      grid-area: brand;
-    }
-
     .search-slot {
       grid-area: search;
+      max-width: none;
     }
 
     .tools {
       grid-area: tools;
-    }
-
-    .brand-text {
-      display: none;
+      justify-self: end;
     }
 
     .filters,
     .statusbar {
       padding-inline: 0.75rem;
-    }
-
-    .body {
-      position: relative;
-    }
-
-    .sheet-backdrop {
-      position: absolute;
-      inset: 0;
-      z-index: 25;
-      display: block;
-      border: 0;
-      background: rgb(0 0 0 / 0.45);
-      animation: silk-fade-in 160ms var(--ease);
-    }
-
-    .body :global(.inspector) {
-      position: absolute;
-      inset: auto 0 0 0;
-      z-index: 30;
-      max-height: 78%;
-      padding-bottom: calc(1rem + env(safe-area-inset-bottom));
-      border-top: 1px solid color-mix(in oklab, var(--border) 45%, transparent);
-      border-left: 0;
-      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-      background-color: color-mix(in oklab, var(--popover) 98%, transparent);
-      backdrop-filter: blur(16px);
-      box-shadow: 0 -12px 32px -20px rgb(0 0 0 / 0.8);
-      animation: silk-sheet 200ms var(--ease);
     }
   }
 </style>

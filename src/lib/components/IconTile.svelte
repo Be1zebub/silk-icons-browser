@@ -6,11 +6,12 @@
     name: string;
     ranges?: readonly Range[];
     size: number;
-    pixelated: boolean;
     selected?: boolean;
     copied?: boolean;
     compact?: boolean;
     title?: string;
+    /** Roving tabindex: only the active tile stays in the tab order. */
+    tabbable?: boolean;
     onclick?: (event: MouseEvent) => void;
   }
 
@@ -18,11 +19,11 @@
     name,
     ranges = [],
     size,
-    pixelated,
     selected = false,
     copied = false,
     compact = false,
     title,
+    tabbable = false,
     onclick,
   }: Props = $props();
 </script>
@@ -33,8 +34,9 @@
   data-compact={compact}
   data-selected={selected}
   data-copied={copied}
-  style="--silk-size: {size}px; --icon-rendering: {pixelated ? 'pixelated' : 'auto'}"
+  style="--silk-size: {size}px"
   aria-pressed={selected}
+  tabindex={tabbable ? 0 : -1}
   title={title ?? name}
   {onclick}
 >
@@ -93,7 +95,7 @@
   }
 
   .glyph :global(.silk) {
-    image-rendering: var(--icon-rendering);
+    image-rendering: pixelated;
   }
 
   .check {
