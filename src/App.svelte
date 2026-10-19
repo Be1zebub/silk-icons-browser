@@ -15,7 +15,7 @@
   import { toasts } from './lib/state/toast.svelte';
   import { urlState } from './lib/state/url';
   import { copyText } from './lib/core/clipboard';
-  import type { CategoryId, IconEntry } from './lib/core/types';
+  import type { CategoryId, IconDoc } from './lib/core/types';
 
   const THEME_ORDER: readonly ThemePreference[] = ['system', 'light', 'dark'];
   const THEME_LABEL: Record<ThemePreference, string> = {
@@ -168,7 +168,7 @@
     activate(name);
   }
 
-  const entry = $derived<IconEntry | null>(selected);
+  const entry = $derived<IconDoc | null>(selected);
 
   // Keep the toast clear of the related strip.
   $effect(() => {

@@ -22,7 +22,9 @@ Vite on <http://localhost:5178>.
 npm run build       # production build into dist/
 npm run preview     # serve the production build
 npm run check       # svelte-check
-npm test            # node:test unit tests for the search core
+npm test            # node:test unit tests, including the MRR suite
+npm run bench       # search latency benchmark
+npm run probe -- q  # try a query from the terminal
 ```
 
 ## Keyboard
@@ -42,33 +44,134 @@ uses a roving tabindex, so `Tab` never walks through 1,010 buttons.
 The search state lives in the URL (`?q=&cat=&icon=`), so results are shareable
 and the back button works.
 
-## How search works
+## The search engine
 
-`src/lib/core/search.ts` ranks every query token against every icon in a single
-pass over the catalog. Per token, in descending order of confidence:
+### Compiled index
 
-1. exact icon name
-2. icon name prefix
-3. exact keyword hit
-4. keyword prefix
-5. name substring
-6. keyword substring
+`scripts/build-catalog.mjs` turns the catalog into a query-ready structure at
+build time. Nothing is tokenized, matched or normalized at runtime except the
+query itself.
 
-Two rules keep the results honest:
+```jsonc
+{
+  "icons":    [{ "n": "accept", "c": 0, "p": [-1, -1] }],  // name, category, sprite position
+  "vocab":    ["accept", "add", "anchor", ...],             // 388 distinct name tokens
+  "exact":    [[0], [1], [2, 5], ...],                    // token -> icon ids
+  "synonyms": { "search": ["magnifier", "find", "zoom"] },
+  "categoryWords": { "person": 5, "people": 5 }
+}
+```
 
-- **Only the literal term may match as a substring.** Synonyms match exactly.
-  Without this, searching `folder` (which expands to `dir`) lights up every icon
-  whose keyword list contains `direction`.
-- **Query expansion is one hop.** Icon keyword lists use the full transitive
-  synonym closure, but a user query expands exactly once. Otherwise
-  `chart → report → document` drags in the entire Files category.
+`exact` is the inverted index: a token lookup is O(1) instead of a scan over
+1,010 icons, and the fuzzy pass runs over the 388-token vocabulary rather than
+over the icons.
 
-When strict matching returns fewer than 24 hits the search retries with a
-bounded Levenshtein pass, and the result badge shows a dot so you know the
-matches are approximate. Matched substrings are highlighted in each result.
+**60.4 KB** uncompressed, against a 150 KB budget.
 
-Measured cost over the full 1,010-icon catalog in a dev build: **2–9 ms** per
-query.
+### Tiers
+
+Each query token is resolved against every candidate independently, and the best
+tier wins.
+
+| Tier            | Score | Meaning                                            |
+| --------------- | ----- | -------------------------------------------------- |
+| `exactName`     | 1000  | the query *is* the icon name                       |
+| `aliasName`     |  950  | the icon's whole name is a synonym of the query    |
+| `tokenExact`    |  800  | the query is one of the name segments              |
+| `namePrefix`    |  700  | the name starts with the query                     |
+| `tokenPrefix`   |  600  | a segment starts with the query                    |
+| `aliasExact`    |  500  | the query reaches a segment through a synonym      |
+| `compact`       |  380  | the query is inside the squashed name              |
+| `fuzzyNameNear` |  320  | one edit from the whole name                       |
+| `fuzzyNear`     |  280  | one edit from a segment                            |
+| `category`      |  260  | the query names a whole category                   |
+| `fuzzyNameFar`  |  230  | two edits from the whole name                      |
+| `subsequence`   |  220  | the query is a subsequence of a segment            |
+| `fuzzyFar`      |  190  | two edits from a segment                           |
+
+### Scoring
+
+```
+coverage = matchedTokens / queryTokens
+score    = (Σ tokenScores) × coverage − aliasPenalty
+```
+
+A result that matches every token outranks one that matches a subset, but a
+partial match is still returned — `folder magnify somethingelse` surfaces the
+folder/magnify icons instead of nothing. An icon whose *whole name* equals the
+query gets a hard floor so it always wins.
+
+### Typo tolerance
+
+Per token, never a global switch. A token that already matched well does not
+also pay for a fuzzy pass; a token that matched nothing gets one.
+
+* Distance is **optimal string alignment** (Levenshtein + transpositions), so
+  `usre` is one edit from `user`, not two.
+* The limit scales with the word: one edit for words of four characters or
+  fewer, two otherwise. `side` and `save` are two edits apart and are different
+  words, not a typo.
+* Candidates are gated by a length filter before the distance pass, and the
+  distance pass uses module level scratch buffers instead of allocating two
+  arrays per call.
+
+### Abbreviations
+
+`isTightSubsequence` matches a query inside a name segment, anchored at the
+first character and within a tight span, so `appl` finds `application` without
+a three letter query matching half the catalog.
+
+### Highlighting
+
+Matches are resolved to name *segments*, not substrings, so the highlight
+covers exactly what matched — the whole segment for an exact or alias match,
+the matched prefix for a prefix match.
+
+## Performance
+
+`npm run bench`, 5,000 iterations over a mix of exact, prefix, synonym, typo,
+multi-token and empty queries:
+
+```
+index        60.4 KB uncompressed, 388 tokens, 1010 icons
+cold call    14.0 ms
+mean         0.14 ms
+p50          0.15 ms
+p95          0.25 ms
+p99          0.39 ms
+```
+
+The cold call is the JIT warming up; `src/lib/core/index-store.ts` runs three
+throwaway searches at load so the first keystroke never pays for it.
+
+Before the rewrite the same queries took 2–9 ms.
+
+## Quality
+
+`tests/search.test.mjs` holds 50 queries with the icon a good result set
+should surface first — exact names, prefixes, synonyms, typos, multi-token
+queries, abbreviations. The suite asserts the exact top-1 hit for every query
+and that the **MRR is above 0.9**.
+
+## Deviations from the original design
+
+Four places where the implementation departs from the plan, with the reason:
+
+1. **No trigram index.** The vocabulary is 388 tokens. A trigram filter would
+   replace a 388-entry scan (≈5 µs) with a map lookup, but the index itself
+   costs ~15 KB and a build step. The inverted index plus a length prefilter
+   already reduces the fuzzy pass to ~130 distance computations, so the
+   trigrams would buy nothing measurable.
+2. **Two extra tiers.** The original ladder had no "exact segment" tier, which
+   ranked a prefix match (`layout_content`) above an exact segment match
+   (`arrow_left`) for the query `left`. `tokenExact` fixes that. `aliasName`
+   exists so `gear` surfaces `cog` rather than `database_gear`.
+3. **Subsequence ranks below fuzzy.** A one-edit typo is a better reading of
+   the query than a loose subsequence match, so `foder` resolves to `folder`
+   through the distance pass rather than the subsequence pass.
+4. **Transpositions count as one edit.** Plain Levenshtein scores `usre` → `user`
+   as two edits, which is at the edge of the tolerance and loses the ranking to
+   `fire`.
 
 ## Categories
 
@@ -93,13 +196,15 @@ vendor/
 └─ famfamfam-silk.css          pristine upstream position map
 scripts/
 ├─ build-sprite.mjs            repacks + re-encodes the sheet, writes silk.css
-└─ build-catalog.mjs           catalog.json generator (categories + synonyms)
+├─ build-catalog.mjs           compiles the search index
+├─ bench.mjs                   latency benchmark
+└─ probe.mjs                   run a query from the terminal
 src/
 ├─ App.svelte                  shell: header, category bar, results, related strip
 ├─ app.css                     design tokens + base styles
 ├─ assets/famfamfam/sprite.png generated spritesheet
 └─ lib/
-   ├─ core/       search ranking, clipboard
+   ├─ core/       index-build, index-store, search, clipboard
    ├─ state/      prefs, catalog, toasts, URL sync (Svelte 5 runes)
    ├─ components/ feature components + a small `ui/` primitive set
    ├─ data/       generated catalog.json

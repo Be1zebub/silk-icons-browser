@@ -1,9 +1,18 @@
-// Generates src/lib/data/catalog.json from the vendored sprite position map.
+// Generates src/lib/data/catalog.json: a compiled, query-ready search index.
 //
 //   node scripts/build-catalog.mjs
 //
-// The icon list is derived from src/lib/styles/silk.css (one rule per icon),
-// so the sprite and the catalog can never drift apart.
+// The output is designed for the runtime in src/lib/core/search.ts:
+//
+//   icons    [{ n, c, p }]           name, category index, sprite position
+//   vocab    ["accept", "add", ...]  distinct name tokens, sorted
+//   exact    [[0], [1], [2, 5], ...]  parallel to vocab: icon ids per token
+//   synonyms { "search": ["find", "magnifier", "zoom"] }
+//   categoryWords { "person": 3, "people": 3 }
+//
+// The inverted `exact` map is what makes a lookup O(1) instead of a scan over
+// 1,010 icons, and keeping synonyms in one shared map (instead of baking the
+// closure into every icon's keyword list) keeps the payload small.
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -119,60 +128,63 @@ const PREFIX_CATEGORY = {
 };
 
 /**
- * Synonyms folded into every matching icon's keyword set, and used to expand
- * user queries ("search" finds "magnifier" and vice versa).
+ * Synonym groups. Every member of a group can reach every other member, so a
+ * query for any of them lands on the same icons.
+ *
+ * The first entry of a group is its canonical icon and gets a small ranking
+ * bonus, so `bin` is the group lead for the trash family and `cog` leads the
+ * settings family.
+ *
+ * Kept deliberately small: a group member that is a common word (`dir`,
+ * `copy`, `page`) poisons every other icon whose keyword list contains it.
  */
 const SYNONYMS = {
   accept: ['ok', 'yes', 'check', 'done', 'success', 'tick', 'approve'],
   add: ['plus', 'new', 'create', 'insert', 'append'],
-  anchor: ['link', 'url', 'anchor'],
-  application: ['app', 'window', 'program', 'ui', 'desktop'],
-  arrow: ['direction', 'navigation', 'back', 'next', 'move'],
+  application: ['app', 'window', 'program', 'desktop'],
+  arrow: ['direction', 'pointer'],
   attach: ['attachment', 'clip', 'paperclip'],
   award: ['medal', 'prize', 'winner', 'trophy'],
   basket: ['cart', 'shop', 'ecommerce'],
   bell: ['notification', 'alarm', 'reminder'],
+  bin: ['trash', 'garbage', 'recycle', 'delete', 'remove', 'destroy', 'erase'],
   book: ['manual', 'docs', 'documentation', 'readme'],
   brick: ['wall', 'masonry'],
   bug: ['debug', 'issue', 'defect'],
   cancel: ['close', 'cross', 'abort', 'discard'],
   car: ['auto', 'vehicle', 'drive'],
   cart: ['basket', 'shop', 'checkout'],
-  chart: ['graph', 'analytics', 'report', 'plot', 'stats'],
+  chart: ['graph', 'analytics', 'plot', 'stats'],
   clock: ['time', 'watch', 'hour'],
   cog: ['gear', 'settings', 'preferences', 'options'],
   comment: ['message', 'chat', 'note', 'reply'],
   comments: ['message', 'chat', 'thread', 'discussion'],
   computer: ['desktop', 'pc', 'machine'],
   connect: ['link', 'chain', 'network', 'online'],
-  control: ['player', 'playback', 'media'],
-  css: ['style', 'stylesheet', 'web'],
+  control: ['player', 'playback'],
   cursor: ['pointer', 'mouse', 'click'],
-  delete: ['remove', 'trash', 'bin', 'destroy', 'erase'],
   disconnect: ['offline', 'unlink'],
-  disk: ['save', 'floppy', 'drive'],
+  disk: ['save', 'floppy'],
   drive: ['disk', 'storage', 'hdd'],
   email: ['mail', 'message', 'letter', 'envelope'],
-  error: ['alert', 'danger', 'warning', 'problem', 'bug', 'invalid'],
+  error: ['alert', 'danger', 'warning', 'problem', 'invalid'],
   exclamation: ['warning', 'alert', 'important', 'attention'],
   eye: ['view', 'preview', 'watch', 'visible'],
   feed: ['rss', 'news', 'subscribe'],
   film: ['movie', 'video', 'cinema'],
-  folder: ['directory', 'dir'],
+  folder: ['directory'],
   group: ['users', 'people', 'team', 'community'],
   heart: ['favorite', 'like', 'love'],
   help: ['question', 'info', 'support', 'faq'],
   house: ['home', 'main'],
   html: ['markup', 'web', 'page'],
-  image: ['photo', 'picture', 'media'],
+  image: ['photo', 'picture'],
   information: ['info', 'details', 'about'],
-  key: ['password', 'access', 'auth', 'apikey'],
+  key: ['password', 'access', 'auth'],
   lightbulb: ['idea', 'inspiration', 'tip'],
   link: ['url', 'chain', 'anchor', 'hyperlink'],
   lock: ['secure', 'security', 'password', 'private'],
   magnifier: ['search', 'find', 'zoom', 'lookup'],
-  media: ['play', 'music', 'video'],
-  monitor: ['display', 'screen', 'desktop'],
   money: ['cash', 'currency', 'payment', 'price'],
   mouse: ['cursor', 'pointer', 'click'],
   music: ['audio', 'sound', 'song', 'player'],
@@ -180,7 +192,7 @@ const SYNONYMS = {
   package: ['box', 'parcel', 'delivery'],
   page: ['file', 'document', 'paper', 'blank'],
   pencil: ['edit', 'write', 'modify', 'rename'],
-  picture: ['image', 'photo', 'media'],
+  picture: ['image', 'photo'],
   plugin: ['extension', 'addon', 'module'],
   printer: ['print'],
   rainbow: ['colorful', 'gradient'],
@@ -192,9 +204,8 @@ const SYNONYMS = {
   star: ['favorite', 'bookmark', 'rating'],
   status: ['online', 'offline', 'presence'],
   table: ['grid', 'spreadsheet', 'data', 'rows'],
-  tag: ['label', 'mark', 'category'],
-  telescope: ['zoom', 'search', 'look'],
-  text: ['font', 'typography', 'copy'],
+  tag: ['label', 'mark'],
+  text: ['font', 'typography'],
   textfield: ['input', 'field', 'form'],
   time: ['clock', 'hour', 'schedule'],
   transmit: ['send', 'upload', 'broadcast'],
@@ -206,27 +217,25 @@ const SYNONYMS = {
   xhtml: ['markup', 'web', 'page'],
 };
 
-/** Category words are searchable, so "people" finds every person icon. */
+/** Extra words that resolve to a whole category. */
 const CATEGORY_WORDS = {
   actions: ['action', 'edit', 'operation'],
-  navigation: ['navigation', 'navigate', 'direction'],
-  interface: ['ui', 'interface', 'widget', 'layout'],
+  navigation: ['navigate', 'direction'],
+  interface: ['ui', 'widget', 'layout'],
   files: ['file', 'document', 'doc'],
-  data: ['data', 'database', 'analytics'],
+  data: ['database', 'analytics'],
   people: ['person', 'user', 'team'],
   comms: ['communication', 'message', 'contact'],
-  media: ['media', 'image', 'video', 'audio'],
-  time: ['time', 'date', 'schedule'],
-  commerce: ['commerce', 'shop', 'payment', 'money'],
-  security: ['security', 'auth', 'permission'],
-  system: ['system', 'device', 'hardware', 'software'],
-  transport: ['transport', 'vehicle', 'place'],
+  media: ['image', 'video', 'audio'],
+  time: ['date', 'schedule'],
+  commerce: ['shop', 'payment', 'money'],
+  security: ['auth', 'permission'],
+  system: ['device', 'hardware', 'software'],
+  transport: ['vehicle', 'place'],
   code: ['code', 'web', 'developer', 'markup'],
-  status: ['status', 'state', 'signal'],
-  misc: ['misc', 'other'],
+  status: ['state', 'signal'],
+  misc: ['other'],
 };
-
-const STOPWORDS = new Set(['a', 'an', 'and', 'the', 'of', 'to', 'in', 'on', 'for', 'with', 'at', 'by']);
 
 const tokenize = (value) =>
   value
@@ -235,53 +244,11 @@ const tokenize = (value) =>
     .split(' ')
     .filter(Boolean);
 
-const compact = (value) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-/**
- * Two indexes on purpose:
- * - `direct`   is used to expand a user query. One hop only, so searching
- *              "chart" does not drag in every "document" icon through the
- *              transitive report -> document edge.
- * - `closed`   is folded into each icon's keyword list, where the transitive
- *              closure is exactly what makes keyword search work.
- */
-function buildAliasIndexes() {
-  const direct = new Map();
-  const closed = new Map();
-
-  const link = (index, term, others) => {
-    const key = compact(term);
-    if (!key) return;
-    const bucket = index.get(key) ?? new Set();
-    for (const value of others) {
-      const normalized = compact(value);
-      if (normalized && normalized !== key) bucket.add(normalized);
-    }
-    index.set(key, bucket);
-  };
-
-  for (const [term, values] of Object.entries(SYNONYMS)) {
-    link(direct, term, values);
-    link(closed, term, values);
-
-    for (const value of values) {
-      const siblings = [term, ...values.filter((item) => item !== value)];
-      link(direct, value, [term]);
-      link(closed, value, siblings);
-    }
-  }
-
-  return { direct, closed };
-}
-
-const ALIASES = buildAliasIndexes();
-
 function readSprite() {
   const css = readFileSync(path.resolve('src/lib/styles/silk.css'), 'utf8');
   const entries = new Map();
 
   const RULE = /^\.silk\.([a-z0-9_]+)\{background-position:calc\((-?\d+) \* var\(--silk-scale\)\) calc\((-?\d+) \* var\(--silk-scale\)\)\}$/gm;
-
   for (const match of css.matchAll(RULE)) {
     entries.set(match[1], [Number(match[2]), Number(match[3])]);
   }
@@ -295,62 +262,98 @@ function categoryFor(name) {
   return PREFIX_CATEGORY[prefix] ?? PREFIX_CATEGORY[name] ?? 'misc';
 }
 
-function keywordsFor(name, category) {
-  const nameTokens = tokenize(name);
-  const keys = new Set(nameTokens);
+/**
+ * Maps every query term to the catalog terms it can reach.
+ *
+ * A group has one *lead* — the icon the group is really about (`cog` for
+ * gear, `bin` for trash, `page` for file). The lead describes the group by
+ * itself, and every other member reaches the lead first, so the lead can
+ * carry a small ranking bonus.
+ *
+ * A term that is itself a lead keeps its own group: `chart` describes the
+ * chart family, so it must not be dragged towards `report` by the fact that
+ * `report` also lists `chart` as a synonym.
+ */
+function buildSynonyms(vocab) {
+  const inVocab = new Set(vocab);
+  const leads = new Set(Object.keys(SYNONYMS));
+  const synonyms = {};
 
-  for (const token of nameTokens) {
-    for (const alias of ALIASES.closed.get(compact(token)) ?? []) keys.add(alias);
+  for (const [lead, values] of Object.entries(SYNONYMS)) {
+    const others = values.filter((value) => inVocab.has(value));
+
+    if (others.length > 0) synonyms[lead] = others;
+
+    for (const member of values) {
+      if (leads.has(member)) continue;
+
+      const reachable = inVocab.has(lead) ? [lead, ...others.filter((value) => value !== member)] : others.filter((value) => value !== member);
+      if (reachable.length === 0) continue;
+      synonyms[member] = reachable;
+    }
   }
 
-  const [first] = name.split('_');
-  for (const alias of ALIASES.closed.get(compact(first)) ?? []) keys.add(alias);
-
-  keys.add(category);
-  for (const word of CATEGORY_WORDS[category] ?? []) keys.add(word);
-
-  keys.delete(STOPWORDS.has(name) ? name : '');
-  return [...keys].sort();
+  return synonyms;
 }
 
-function buildCatalog() {
-  const sprite = readSprite();
-  const names = [...sprite.keys()].sort((a, b) => a.localeCompare(b, 'en'));
-  const counts = new Map();
+function buildCategoryWords() {
+  const words = {};
 
-  const icons = names.map((name) => {
-    const category = categoryFor(name);
-    counts.set(category, (counts.get(category) ?? 0) + 1);
-    return { n: name, c: category, p: sprite.get(name), k: keywordsFor(name, category) };
+  CATEGORIES.forEach((category, index) => {
+    words[category.id] = index;
+    words[category.label.toLowerCase()] = index;
+    for (const word of CATEGORY_WORDS[category.id] ?? []) words[word] = index;
   });
 
-  const unknownPrefixes = [...new Set(names.map((name) => name.split('_')[0]))].filter(
-    (prefix) => !(prefix in PREFIX_CATEGORY) && !(prefix in SYNONYMS),
-  );
-  if (unknownPrefixes.length > 0) {
-    console.warn('unmapped prefixes:', unknownPrefixes.join(', '));
-  }
-
-  const aliases = {};
-  for (const [term, values] of [...ALIASES.direct].sort(([a], [b]) => a.localeCompare(b))) {
-    aliases[term] = [...values].sort();
-  }
-
-  return {
-    version: 1,
-    categories: CATEGORIES,
-    icons,
-    aliases,
-    counts: Object.fromEntries(CATEGORIES.map(({ id }) => [id, counts.get(id) ?? 0])),
-  };
+  return words;
 }
 
-const catalog = buildCatalog();
+const sprite = readSprite();
+const names = [...sprite.keys()].sort((a, b) => a.localeCompare(b, 'en'));
+
+const categoryIndex = new Map(CATEGORIES.map((category, index) => [category.id, index]));
+
+const icons = names.map((name) => {
+  const category = categoryFor(name);
+  return { n: name, c: categoryIndex.get(category) ?? categoryIndex.get('misc'), p: sprite.get(name) };
+});
+
+// Vocabulary: every distinct name token.
+const vocabSet = new Set();
+for (const icon of icons) {
+  for (const token of tokenize(icon.n)) vocabSet.add(token);
+}
+const vocab = [...vocabSet].sort();
+const vocabIndex = new Map(vocab.map((term, index) => [term, index]));
+
+// Inverted index: token -> icon ids.
+const exact = vocab.map(() => []);
+icons.forEach((icon, id) => {
+  for (const token of new Set(tokenize(icon.n))) {
+    exact[vocabIndex.get(token)].push(id);
+  }
+});
+
+const synonyms = buildSynonyms(vocab);
+const categoryWords = buildCategoryWords();
+
+const catalog = {
+  version: 2,
+  categories: CATEGORIES,
+  categoryWords,
+  synonyms,
+  icons,
+  vocab,
+  exact,
+};
+
 const target = path.resolve('src/lib/data/catalog.json');
-writeFileSync(target, `${JSON.stringify(catalog)}\n`);
+const json = JSON.stringify(catalog);
+writeFileSync(target, `${json}\n`);
 
-const total = catalog.icons.length;
-console.log(`wrote ${total} icons to ${target} (${(JSON.stringify(catalog).length / 1024).toFixed(0)} KB)`);
-for (const { id, label } of CATEGORIES) {
-  console.log(`  ${label.padEnd(12)} ${String(catalog.counts[id]).padStart(4)}`);
-}
+const counts = new Map();
+for (const icon of icons) counts.set(icon.c, (counts.get(icon.c) ?? 0) + 1);
+
+console.log(`wrote ${icons.length} icons, ${vocab.length} tokens to ${target}`);
+console.log(`  payload ${(json.length / 1024).toFixed(1)} KB uncompressed`);
+console.log(`  ${CATEGORIES.map(({ id }) => `${id}=${counts.get(categoryIndex.get(id)) ?? 0}`).join(' ')}`);

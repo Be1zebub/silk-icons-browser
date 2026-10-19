@@ -1,11 +1,11 @@
 <script lang="ts">
   import Glyph from './Glyph.svelte';
   import { relatedIcons } from '../core/search';
-  import type { IconEntry } from '../core/types';
+  import type { IconDoc } from '../core/types';
 
   interface Props {
-    icon: IconEntry;
-    entries: readonly IconEntry[];
+    icon: IconDoc;
+    entries: readonly IconDoc[];
     onselect: (name: string) => void;
     onclose: () => void;
   }

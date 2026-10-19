@@ -21,45 +21,68 @@ export interface CategoryMeta {
   label: string;
 }
 
-export interface CatalogIcon {
-  /** Icon name, e.g. `application_side_boxes`. */
+/** A single icon, with everything the runtime needs derived once at load. */
+export interface IconDoc {
+  id: number;
   name: string;
   category: CategoryId;
   /** `[background-position-x, background-position-y]` in the vendored sprite. */
   position: readonly [x: number, y: number];
-  /** Searchable keywords: name tokens + synonyms + category words. */
-  keywords: readonly string[];
-}
-
-export interface IconEntry extends CatalogIcon {
-  /** `name` without separators, lowercased. */
+  /** Lowercased name segments, e.g. `application_side_boxes` -> 3 segments. */
+  segments: readonly string[];
+  /** Character range of each segment inside `name`, for highlighting. */
+  ranges: readonly (readonly [start: number, end: number])[];
+  /** Segments joined without separators. */
   compact: string;
-  /** Space-joined keywords, used for a single-pass `includes`. */
-  haystack: string;
+  /** Segments joined with spaces. */
+  normalized: string;
 }
 
 /** Shape of the generated `catalog.json`. */
 export interface RawCatalog {
   version: number;
   categories: readonly CategoryMeta[];
-  icons: readonly { n: string; c: CategoryId; p: readonly [number, number]; k: readonly string[] }[];
-  aliases: Readonly<Record<string, readonly string[]>>;
-  counts: Readonly<Record<CategoryId, number>>;
+  /** Extra query words that resolve to a whole category. */
+  categoryWords: Readonly<Record<string, number>>;
+  /** Query term -> catalog terms it can reach. */
+  synonyms: Readonly<Record<string, readonly string[]>>;
+  icons: readonly { n: string; c: number; p: readonly [number, number] }[];
+  /** Distinct name tokens, sorted. */
+  vocab: readonly string[];
+  /** Parallel to `vocab`: icon ids per token. */
+  exact: readonly (readonly number[])[];
+}
+
+/** The compiled index the search engine runs against. */
+export interface SearchIndex {
+  docs: readonly IconDoc[];
+  categories: readonly CategoryMeta[];
+  vocab: readonly string[];
+  vocabIndex: ReadonlyMap<string, number>;
+  exact: readonly (readonly number[])[];
+  synonyms: Readonly<Record<string, readonly string[]>>;
+  categoryWords: Readonly<Record<string, number>>;
+  categoryIcons: ReadonlyMap<CategoryId, readonly number[]>;
+  categoryCounts: Readonly<Record<string, number>>;
 }
 
 export type Range = readonly [start: number, end: number];
 
 export interface SearchHit {
-  icon: IconEntry;
+  icon: IconDoc;
   score: number;
   /** Character ranges inside `icon.name` to highlight. */
   ranges: readonly Range[];
+  /** How many query tokens this icon matched. */
+  matchedTokens: number;
+  /** `matchedTokens / queryTokenCount`. */
+  coverage: number;
 }
 
 export interface SearchOutcome {
   hits: readonly SearchHit[];
-  /** True when the strict pass found too little and fuzzy matching kicked in. */
+  /** True when a token fell back to fuzzy or subsequence matching. */
   fuzzy: boolean;
-  /** Milliseconds spent searching, surfaced in the status bar. */
+  /** Milliseconds spent searching. */
   duration: number;
 }
