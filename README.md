@@ -9,11 +9,11 @@ A lightning-fast, keyboard-driven browser for all 1,010 [FamFamFam "Silk"](https
 Instantaneous client-side search across categorized sets, flexible pixel-grid scaling (16px to 48px), and single-keystroke asset copying.  
 Built for developers who want clean tools without bloat.
 
+**Live:** <https://silk.bzbb.dev>
+
 <div align="center">
   <img src="public/og.png" alt="Silk" width="640" />
 </div>
-
-**Live:** <https://silk.bzbb.dev> · **Source:** <https://github.com/Be1zebub/silk-icons-browser>
 
 ## What is in here
 
