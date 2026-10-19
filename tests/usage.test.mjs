@@ -2,28 +2,13 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  fetchGlobalCounts,
-  MemoryUsageStorage,
-  postCounts,
-  rankCounts,
-  UsageCounter,
+	fetchGlobalCounts,
+	MemoryUsageStorage,
+	postCounts,
+	rankCounts,
+	UsageCounter,
 } from '../src/lib/core/usage.ts';
-import { onRequestGet, onRequestPost } from '../functions/api/usage.ts';
-
-/** A KV namespace in a Map. */
-function memoryKv() {
-  const store = new Map();
-
-  return {
-    store,
-    async get(key) {
-      return store.get(key) ?? null;
-    },
-    async put(key, value) {
-      store.set(key, value);
-    },
-  };
-}
+import { Counters } from '../src/worker/counters.ts';
 
 describe('usage counter', () => {
   it('counts copies per icon', () => {
@@ -121,66 +106,77 @@ describe('usage transport', () => {
   });
 });
 
-describe('pages function', () => {
-  const request = (body) =>
+describe('durable object', () => {
+  /** A Durable Object state backed by a Map. */
+  function memoryState() {
+    const store = new Map();
+
+    return {
+      store,
+      storage: {
+        async get(key) {
+          return store.get(key)
+        },
+        async put(key, value) {
+          store.set(key, value)
+        },
+      },
+    };
+  }
+
+  const post = (body) =>
     new Request('https://silk.bzbb.dev/api/usage', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
     });
 
-  it('stores the counts in KV', async () => {
-    const USAGE = memoryKv();
+  it('stores the counts', async () => {
+    const state = memoryState();
+    const counters = new Counters(state);
 
-    const response = await onRequestPost({
-      request: request({ counts: { accept: 2, zoom: 1 } }),
-      env: { USAGE },
-    });
+    const response = await counters.fetch(post({ counts: { accept: 2, zoom: 1 } }));
 
     assert.equal(response.status, 204);
-    assert.deepEqual(JSON.parse(USAGE.store.get('usage:counts')), { accept: 2, zoom: 1 });
+    assert.deepEqual(state.store.get('counts'), { accept: 2, zoom: 1 });
   });
 
   it('adds to the stored counts', async () => {
-    const USAGE = memoryKv();
+    const state = memoryState();
+    const counters = new Counters(state);
 
-    await onRequestPost({ request: request({ counts: { accept: 2 } }), env: { USAGE } });
-    await onRequestPost({ request: request({ counts: { accept: 3 } }), env: { USAGE } });
+    await counters.fetch(post({ counts: { accept: 2 } }));
+    await counters.fetch(post({ counts: { accept: 3 } }));
 
-    assert.deepEqual(JSON.parse(USAGE.store.get('usage:counts')), { accept: 5 });
+    assert.equal(state.store.get('counts').accept, 5);
   });
 
   it('ignores junk', async () => {
-    const USAGE = memoryKv();
+    const state = memoryState();
+    const counters = new Counters(state);
 
-    await onRequestPost({ request: request({ counts: { accept: 2 } }), env: { USAGE } });
-    await onRequestPost({
-      request: request({ counts: { '<script>': 5, ok: -1, nan: 'x' } }),
-      env: { USAGE },
-    });
+    await counters.fetch(post({ counts: { accept: 2 } }));
+    await counters.fetch(post({ counts: { '<script>': 5, ok: -1, nan: 'x' } }));
 
-    assert.deepEqual(JSON.parse(USAGE.store.get('usage:counts')), { accept: 2 });
+    assert.deepEqual(state.store.get('counts'), { accept: 2 });
   });
 
   it('rejects a body without counts', async () => {
-    const response = await onRequestPost({ request: request({}), env: { USAGE: memoryKv() } });
+    const counters = new Counters(memoryState());
+    const response = await counters.fetch(post({}));
 
     assert.equal(response.status, 400);
   });
 
-  it('answers the ranking', async () => {
-    const USAGE = memoryKv();
-    await onRequestPost({ request: request({ counts: { accept: 2 } }), env: { USAGE } });
+  it('answers the ranking, most copied first', async () => {
+    const state = memoryState();
+    const counters = new Counters(state);
 
-    const response = await onRequestGet({ request: new Request('https://silk.bzbb.dev/api/usage'), env: { USAGE } });
+    await counters.fetch(post({ counts: { accept: 2, zoom: 7 } }));
+
+    const response = await counters.fetch(new Request('https://silk.bzbb.dev/api/usage'));
     const body = await response.json();
 
-    assert.deepEqual(body.counts, { accept: 2 });
-  });
-
-  it('works without the KV binding', async () => {
-    const response = await onRequestPost({ request: request({ counts: { accept: 2 } }), env: {} });
-
-    assert.equal(response.status, 204);
+    assert.deepEqual(body.counts, { zoom: 7, accept: 2 });
   });
 });

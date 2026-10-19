@@ -80,15 +80,20 @@ class UsageState {
 			void this.sync()
 		}, SYNC_INTERVAL)
 
-		// Flush the last copies when the page goes away.
+		// Flush the last copies when the page goes away. `keepalive` lets the
+		// request outlive the page.
 		const flush = () => {
 			if (this.#pending.size === 0) return
+
 			const counts = Object.fromEntries(this.#pending)
 			this.#pending.clear()
-			navigator.sendBeacon?.(
-				ENDPOINT,
-				new Blob([JSON.stringify({ counts })], { type: "application/json" }),
-			)
+
+			void postCounts(ENDPOINT, counts).then((sent) => {
+				if (sent) return
+				for (const [name, count] of Object.entries(counts)) {
+					this.#pending.set(name, (this.#pending.get(name) ?? 0) + count)
+				}
+			})
 		}
 
 		window.addEventListener("pagehide", flush)
