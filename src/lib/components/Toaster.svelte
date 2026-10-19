@@ -2,7 +2,7 @@
 	import { toasts } from "../state/toast.svelte"
 </script>
 
-<div class="stack" role="status" aria-live="polite">
+<div class="stack glass" role="status" aria-live="polite">
 	{#each toasts.items as toast (toast.id)}
 		<button
 			type="button"
@@ -38,8 +38,7 @@
 		padding: 0.375rem 0.75rem;
 		border: 1px solid color-mix(in oklab, var(--border) 14%, transparent);
 		border-radius: 999px;
-		background-color: color-mix(in oklab, var(--popover) 94%, transparent);
-		backdrop-filter: blur(12px);
+		background-color: color-mix(in oklab, var(--popover) 68%, transparent);
 		box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.6);
 		font-size: var(--text-xs);
 		line-height: var(--text-xs-lh);

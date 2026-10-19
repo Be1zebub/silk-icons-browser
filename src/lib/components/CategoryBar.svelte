@@ -63,7 +63,7 @@
 	{#if canScrollLeft}
 		<button
 			type="button"
-			class="nav"
+			class="nav glass"
 			aria-label="Scroll categories left"
 			title="Scroll left"
 			onclick={() => scrollBy(-1)}
@@ -83,6 +83,7 @@
 		<button
 			type="button"
 			class="chip"
+			class:glass={value === "all"}
 			data-active={value === "all"}
 			aria-pressed={value === "all"}
 			onclick={() => onchange("all")}
@@ -95,6 +96,7 @@
 			<button
 				type="button"
 				class="chip popular"
+				class:glass={value === "popular"}
 				data-active={value === "popular"}
 				aria-pressed={value === "popular"}
 				title="The icons everyone copies the most"
@@ -109,6 +111,7 @@
 			<button
 				type="button"
 				class="chip"
+				class:glass={value === category.id}
 				data-active={value === category.id}
 				data-empty={(counts[category.id] ?? 0) === 0}
 				aria-pressed={value === category.id}
@@ -123,7 +126,7 @@
 	{#if canScrollRight}
 		<button
 			type="button"
-			class="nav"
+			class="nav glass"
 			aria-label="Scroll categories right"
 			title="Scroll right"
 			onclick={() => scrollBy(1)}
@@ -150,7 +153,7 @@
 		justify-content: center;
 		border: 1px solid color-mix(in oklab, var(--border) 12%, transparent);
 		border-radius: var(--radius-md);
-		background-color: color-mix(in oklab, var(--input) 8%, transparent);
+		background-color: color-mix(in oklab, var(--card) 52%, transparent);
 		color: var(--muted-foreground);
 		transition:
 			background-color var(--duration) var(--ease),
@@ -209,7 +212,6 @@
 		background-color: color-mix(in oklab, var(--foreground) 9%, transparent);
 		color: var(--foreground);
 	}
-
 	.chip.popular .count {
 		background-color: color-mix(in oklab, var(--primary) 30%, transparent);
 		color: color-mix(in oklab, var(--primary) 85%, var(--foreground));

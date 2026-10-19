@@ -21,7 +21,7 @@
   let { options, value, label, size = 'default', onchange, children }: Props = $props();
 </script>
 
-<div class="segmented" role="group" aria-label={label} data-size={size}>
+<div class="segmented glass" role="group" aria-label={label} data-size={size}>
   {#each options as option (option.value)}
     {@const active = option.value === value}
     <button
@@ -45,7 +45,7 @@
     padding: 2px;
     border: 1px solid color-mix(in oklab, var(--border) 12%, transparent);
     border-radius: var(--radius-lg);
-    background-color: color-mix(in oklab, var(--input) 8%, transparent);
+    background-color: color-mix(in oklab, var(--card) 52%, transparent);
   }
 
   .segment {

@@ -15,6 +15,10 @@
     hideLabel?: boolean;
     class?: string;
     disabled?: boolean;
+    /** Renders an anchor instead of a button. */
+    href?: string;
+    target?: string;
+    rel?: string;
     onclick?: (event: MouseEvent) => void;
     children: Snippet;
   }
@@ -26,24 +30,47 @@
     hideLabel = false,
     class: className = '',
     disabled = false,
+    href,
+    target,
+    rel,
     onclick,
     children,
   }: Props = $props();
+
+  const classes = $derived(`btn ${className}`);
 </script>
 
-<button
-  type="button"
-  class="btn {className}"
-  data-variant={variant}
-  data-size={size}
-  title={label}
-  aria-label={hideLabel ? label : undefined}
-  {disabled}
-  {onclick}
->
-  {@render children()}
-  {#if hideLabel && label}<span class="sr-only">{label}</span>{/if}
-</button>
+{#if href}
+  <a
+    class={classes}
+    class:glass={variant === 'default' || variant === 'outline'}
+    data-variant={variant}
+    data-size={size}
+    {href}
+    {target}
+    {rel}
+    title={label}
+    aria-label={hideLabel ? label : undefined}
+  >
+    {@render children()}
+    {#if hideLabel && label}<span class="sr-only">{label}</span>{/if}
+  </a>
+{:else}
+  <button
+    type="button"
+    class={classes}
+    class:glass={variant === 'default' || variant === 'outline'}
+    data-variant={variant}
+    data-size={size}
+    title={label}
+    aria-label={hideLabel ? label : undefined}
+    {disabled}
+    {onclick}
+  >
+    {@render children()}
+    {#if hideLabel && label}<span class="sr-only">{label}</span>{/if}
+  </button>
+{/if}
 
 <style>
   .btn {
@@ -56,6 +83,7 @@
     border-radius: var(--radius-lg);
     font-weight: 500;
     white-space: nowrap;
+    text-decoration: none;
     user-select: none;
     transition:
       background-color var(--duration) var(--ease),
@@ -114,26 +142,26 @@
   }
 
   .btn[data-variant='default'] {
-    background-color: var(--primary);
+    background-color: color-mix(in oklab, var(--primary) 86%, transparent);
     color: var(--primary-foreground);
   }
   .btn[data-variant='default']:hover {
-    background-color: color-mix(in oklab, var(--primary) 88%, black);
+    background-color: color-mix(in oklab, var(--primary) 76%, black);
   }
   .btn[data-variant='default']:active {
-    background-color: color-mix(in oklab, var(--primary) 82%, black);
+    background-color: color-mix(in oklab, var(--primary) 70%, black);
   }
 
   .btn[data-variant='outline'] {
     border-color: color-mix(in oklab, var(--border) 12%, transparent);
-    background-color: color-mix(in oklab, var(--input) 10%, transparent);
+    background-color: color-mix(in oklab, var(--card) 52%, transparent);
   }
   .btn[data-variant='outline']:hover {
     border-color: color-mix(in oklab, var(--border) 22%, transparent);
-    background-color: color-mix(in oklab, var(--input) 16%, transparent);
+    background-color: color-mix(in oklab, var(--card) 66%, transparent);
   }
   .btn[data-variant='outline']:active {
-    background-color: color-mix(in oklab, var(--input) 20%, transparent);
+    background-color: color-mix(in oklab, var(--card) 74%, transparent);
   }
 
   .btn[data-variant='ghost'],
@@ -148,11 +176,11 @@
   }
   .btn[data-variant='ghost']:hover,
   .btn[data-variant='ghost-muted']:hover {
-    background-color: color-mix(in oklab, var(--input) 12%, transparent);
+    background-color: color-mix(in oklab, var(--foreground) 8%, transparent);
     color: var(--foreground);
   }
   .btn[data-variant='ghost']:active,
   .btn[data-variant='ghost-muted']:active {
-    background-color: color-mix(in oklab, var(--input) 18%, transparent);
+    background-color: color-mix(in oklab, var(--foreground) 12%, transparent);
   }
 </style>

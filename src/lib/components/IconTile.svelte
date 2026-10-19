@@ -72,7 +72,9 @@
 
 	.tile:hover {
 		border-color: color-mix(in oklab, var(--border) 14%, transparent);
-		background-color: color-mix(in oklab, var(--input) 10%, transparent);
+		background-color: color-mix(in oklab, var(--card) 45%, transparent);
+		backdrop-filter: blur(8px) saturate(140%);
+		-webkit-backdrop-filter: blur(8px) saturate(140%);
 	}
 
 	.tile:active {
@@ -81,7 +83,9 @@
 
 	.tile[data-selected="true"] {
 		border-color: color-mix(in oklab, var(--primary) 45%, transparent);
-		background-color: color-mix(in oklab, var(--primary) 12%, transparent);
+		background-color: color-mix(in oklab, var(--primary) 16%, transparent);
+		backdrop-filter: blur(8px) saturate(140%);
+		-webkit-backdrop-filter: blur(8px) saturate(140%);
 	}
 
 	.glyph {

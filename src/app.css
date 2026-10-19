@@ -32,8 +32,13 @@
 
 	/* The backdrop grid: two hairlines per cell, barely there. */
 	--grid-size: 44px;
-	--grid-line: rgba(255, 255, 255, 0.038);
-	--grid-glow: rgba(96, 128, 255, 0.055);
+	--grid-line: rgba(255, 255, 255, 0.027);
+	--grid-glow: rgba(96, 128, 255, 0.05);
+
+	/* Glass: the grain tile and the blur recipe. */
+	--glass-blur: 18px;
+	--glass-sat: 150%;
+	--noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E");
 
 	--radius-xs: 0.125rem;
 	--radius-sm: 0.25rem;
@@ -183,6 +188,24 @@ button {
 
 ::selection {
 	background: color-mix(in oklab, var(--primary) 40%, transparent);
+}
+
+/* --------------------------------------------------------------------------
+ * Glass
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Frosted glass: a translucent surface, the page blurred behind it and a
+ * faint grain so the blur does not read as flat plastic.
+ *
+ * The element keeps its own background-color; the utility only adds the
+ * texture and the backdrop filter.
+ */
+.glass {
+	background-image: var(--noise);
+	background-size: 140px 140px;
+	backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+	-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
 }
 
 /* --------------------------------------------------------------------------

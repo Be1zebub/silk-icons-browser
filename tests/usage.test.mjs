@@ -107,9 +107,11 @@ describe('usage transport', () => {
 });
 
 describe('the app stays static', () => {
-  it('ships no worker and no pages function', () => {
+  it('ships no worker and no wrangler worker config', () => {
     assert.equal(existsSync(new URL('../src/worker', import.meta.url)), false);
-    assert.equal(existsSync(new URL('../functions', import.meta.url)), false);
-    assert.equal(existsSync(new URL('../wrangler.toml', import.meta.url)), false);
+  });
+
+  it('has a Pages Function for the counter', () => {
+    assert.equal(existsSync(new URL('../functions/api/usage.ts', import.meta.url)), true);
   });
 });

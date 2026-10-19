@@ -17,7 +17,7 @@
 	const related = $derived(relatedIcons(icon, searchIndex))
 </script>
 
-<div class="related-bar" role="group" aria-label="Related icons">
+<div class="related-bar glass" role="group" aria-label="Related icons">
 	<div class="strip">
 		<button
 			type="button"
@@ -88,8 +88,7 @@
 		gap: 0.5rem;
 		padding: 0.5rem 0.75rem;
 		border-top: 1px solid color-mix(in oklab, var(--border) 45%, transparent);
-		background-color: color-mix(in oklab, var(--card) 55%, transparent);
-		backdrop-filter: blur(12px);
+		background-color: color-mix(in oklab, var(--card) 62%, transparent);
 		animation: silk-fade-in 160ms var(--ease);
 	}
 
