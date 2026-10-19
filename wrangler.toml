@@ -1,0 +1,9 @@
+name = "silk-icons-browser"
+compatibility_date = "2026-10-19"
+pages_build_output_dir = "dist"
+
+# The global copy counter. The Pages Function in functions/api/usage.ts reads
+# and writes this namespace.
+[[kv_namespaces]]
+binding = "USAGE"
+id = "5cfe3ae7605f4210bbef7fe0303903c5"

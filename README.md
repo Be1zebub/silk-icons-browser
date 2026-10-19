@@ -31,11 +31,16 @@ Built for developers who want clean tools without bloat.
 
 ## Deploying
 
-A static site. `npm run build` writes `dist/`, which is all you need to host.
+A static site plus one Pages Function. `npm run build` writes `dist/`, which
+is all you need to host.
 
 Cloudflare Pages, Netlify, GitHub Pages, an S3 bucket — anything that serves
 files. Set `VITE_SITE_URL` in `.env` to the public URL so the Open Graph image
 and the canonical link are absolute.
+
+`functions/api/usage.ts` is the counter backend. It needs a KV namespace bound
+as `USAGE`; `wrangler.toml` already points at one. Without the binding the
+site still works, the ranking just stays local.
 
 ## Commands
 

@@ -8,12 +8,13 @@ import {
 } from "../core/usage"
 
 /**
- * Where the counter is sent, if anywhere. The app is a static site, so there
- * is no endpoint by default: the counts stay in the browser. Point
- * VITE_USAGE_ENDPOINT at something that speaks the same two routes to make the
- * ranking global.
+ * Where the counter is sent. The Pages Function answers on the same origin, so
+ * this works out of the box in production. The Vite dev server has no such
+ * endpoint, so there it stays off unless one is set explicitly.
  */
-const ENDPOINT = import.meta.env.VITE_USAGE_ENDPOINT as string | undefined
+const ENDPOINT =
+	(import.meta.env.VITE_USAGE_ENDPOINT as string | undefined) ??
+	(import.meta.env.DEV ? null : "/api/usage")
 
 /** How often the pending copies are flushed to the server. */
 const SYNC_INTERVAL = 30_000
