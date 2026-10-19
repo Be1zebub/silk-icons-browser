@@ -18,8 +18,6 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"serve": "node scripts/serve.mjs",
-		"deploy": "npm run build && wrangler deploy",
-		"dev:worker": "npm run build && wrangler dev",
 		"build:data": "node scripts/build-sprite.mjs && node scripts/build-catalog.mjs",
 		"build:og": "node scripts/build-og.mjs",
 		"bench": "node scripts/bench.mjs",
@@ -43,8 +41,7 @@
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"typescript": "^5.6.0",
-		"vite": "^7.0.0",
-		"wrangler": "^4.151.2"
+		"vite": "^7.0.0"
 	},
 	"allowScripts": {
 		"esbuild@0.28.2": true,

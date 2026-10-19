@@ -8,18 +8,17 @@ import {
 } from "../core/usage"
 
 /**
- * Where the global counter lives. The Worker answers on the same origin, so
- * this works out of the box in production. The Vite dev server has no such
- * endpoint, so there it is off unless one is set explicitly.
+ * Where the counter is sent, if anywhere. The app is a static site, so there
+ * is no endpoint by default: the counts stay in the browser. Point
+ * VITE_USAGE_ENDPOINT at something that speaks the same two routes to make the
+ * ranking global.
  */
-const ENDPOINT =
-	(import.meta.env.VITE_USAGE_ENDPOINT as string | undefined) ??
-	(import.meta.env.DEV ? null : "/api/usage")
+const ENDPOINT = import.meta.env.VITE_USAGE_ENDPOINT as string | undefined
 
 /** How often the pending copies are flushed to the server. */
 const SYNC_INTERVAL = 30_000
 
-/** How many icons the global ranking keeps. */
+/** How many icons the ranking keeps. */
 const GLOBAL_LIMIT = 64
 
 function createStorage(): UsageStorage {
@@ -37,7 +36,7 @@ class UsageState {
 	#version = $state(0)
 	/** Copies made since the last flush. */
 	#pending = new Map<string, number>()
-	/** The global ranking, as returned by the Pages Function. */
+	/** The ranking from the server, when there is a server. */
 	#global = $state<string[]>([])
 	#timer = 0
 
@@ -58,10 +57,14 @@ class UsageState {
 		return this.#counter.popular(limit)
 	}
 
-	/** The most copied icons across every visitor. */
-	globalPopular = $derived.by<string[]>(() => {
+	/**
+	 * The most copied icons, from the server when there is one and from this
+	 * machine otherwise.
+	 */
+	popularIcons = $derived.by<string[]>(() => {
 		this.#version
-		return this.#global
+		if (this.#global.length > 0) return this.#global
+		return this.#counter.popular(24)
 	})
 
 	total = $derived.by(() => {
@@ -78,29 +81,31 @@ class UsageState {
 	start(): void {
 		if (this.#timer) return
 
-		this.#timer = window.setInterval(() => {
-			void this.sync()
-		}, SYNC_INTERVAL)
+		if (ENDPOINT) {
+			this.#timer = window.setInterval(() => {
+				void this.sync()
+			}, SYNC_INTERVAL)
 
-		// Flush the last copies when the page goes away. `keepalive` lets the
-		// request outlive the page.
-		const flush = () => {
-			if (!ENDPOINT || this.#pending.size === 0) return
+			// Flush the last copies when the page goes away. `keepalive` lets the
+			// request outlive the page.
+			const flush = () => {
+				if (this.#pending.size === 0) return
 
-			const counts = Object.fromEntries(this.#pending)
-			this.#pending.clear()
+				const counts = Object.fromEntries(this.#pending)
+				this.#pending.clear()
 
-			void postCounts(ENDPOINT, counts).then((sent) => {
-				if (sent) return
-				for (const [name, count] of Object.entries(counts)) {
-					this.#pending.set(name, (this.#pending.get(name) ?? 0) + count)
-				}
-			})
+				void postCounts(ENDPOINT, counts).then((sent) => {
+					if (sent) return
+					for (const [name, count] of Object.entries(counts)) {
+						this.#pending.set(name, (this.#pending.get(name) ?? 0) + count)
+					}
+				})
+			}
+
+			window.addEventListener("pagehide", flush)
+
+			void this.refresh()
 		}
-
-		window.addEventListener("pagehide", flush)
-
-		void this.refresh()
 	}
 
 	stop(): void {
@@ -109,7 +114,7 @@ class UsageState {
 		this.#timer = 0
 	}
 
-	/** Fetches the global ranking. Silently does nothing when there is none. */
+	/** Fetches the ranking from the server. Silently does nothing without one. */
 	async refresh(): Promise<void> {
 		if (!ENDPOINT) return
 

@@ -91,9 +91,9 @@
 		]
 	})
 
-	/** The icons everyone copies the most, as ranked by the Pages Function. */
+	/** The icons everyone copies the most. */
 	const popularHits = $derived.by<readonly SearchHit[]>(() => {
-		const names = usage.globalPopular
+		const names = usage.popularIcons
 		const hits: SearchHit[] = []
 
 		for (const name of names) {

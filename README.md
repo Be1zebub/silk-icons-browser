@@ -1,5 +1,9 @@
 # Silk Icons Browser
 
+[![ci][badge-ci]][ci] [![license][badge-license]][license]
+[![github stars][badge-stars]][repo]
+![Visitors](https://visitor-badge.laobi.icu/badge?page_id=Be1zebub/silk-icons-browser)
+
 A lightning-fast, keyboard-driven browser for all 1,010 [FamFamFam "Silk"](https://www.famfamfam.com/lab/icons/silk/) icons.
 
 Instantaneous client-side search across categorized sets, flexible pixel-grid scaling (16px to 48px), and single-keystroke asset copying.  
@@ -8,8 +12,6 @@ Built for developers who want clean tools without bloat.
 <div align="center">
   <img src="public/og.png" alt="Silk" width="640" />
 </div>
-
-[![Deploy to Cloudflare][badge-deploy]][deploy]
 
 **Live:** <https://silk.bzbb.dev> · **Source:** <https://github.com/Be1zebub/silk-icons-browser>
 
@@ -23,37 +25,23 @@ Built for developers who want clean tools without bloat.
   scrollbar thumb stays the same size all the way down.
 - **A related strip** — pick an icon, get its family, ranked by how specific
   the evidence is.
-- **Copy name / Copy PNG.**
-- **A global popularity counter** — per icon name, no identifier, no IP, no
-  timestamp. It comes back as the **Popular** category.
+- **Copy name / Copy class / Copy rule / Copy PNG.**
+- **A popularity counter** — per icon name, no identifier, no IP, no timestamp.
+  It comes back as the **Popular** category.
 
 ## Deploying
 
-[Deploy to Cloudflare][deploy] clones the repo, builds it and deploys the
-Worker. The site and the counter are one Worker: the assets ride along, and
-`/api/usage` is a Durable Object that needs no provisioning.
+A static site. `npm run build` writes `dist/`, which is all you need to host.
 
-```bash
-npm run deploy    # build + wrangler deploy
-```
-
-`VITE_SITE_URL` in `.env` is what makes the Open Graph image and the canonical
-URL absolute. Change it if you deploy somewhere else.
-
-The counter stores only icon names and counts. `POST /api/usage` adds a delta,
-`GET /api/usage` returns the ranking. The client batches its copies, so a
-visitor costs one write per batch instead of one per copy.
-
-Anywhere else: `npm run build` and serve `dist/`. Asset paths are relative, so
-a sub path works too.
+Cloudflare Pages, Netlify, GitHub Pages, an S3 bucket — anything that serves
+files. Set `VITE_SITE_URL` in `.env` to the public URL so the Open Graph image
+and the canonical link are absolute.
 
 ## Commands
 
 ```
 npm run dev         # dev server on :5178
 npm run build       # production build into dist/
-npm run deploy      # build + wrangler deploy
-npm run dev:worker  # build + wrangler dev
 npm run check       # svelte-check
 npm test            # unit tests
 npm run bench       # search latency
@@ -84,5 +72,9 @@ The visual language is inspired by [Toolcraft](https://github.com/pixel-point/to
 by Pixel Point.  
 The interface icons are [Lucide](https://lucide.dev).
 
-[deploy]: https://deploy.workers.cloudflare.com/?url=https://github.com/Be1zebub/silk-icons-browser
-[badge-deploy]: https://img.shields.io/badge/deploy-cloudflare-F38020?logo=cloudflare&logoColor=white
+[repo]: https://github.com/Be1zebub/silk-icons-browser
+[ci]: https://github.com/Be1zebub/silk-icons-browser/actions/workflows/ci.yml
+[license]: ./LICENSE
+[badge-ci]: https://github.com/Be1zebub/silk-icons-browser/actions/workflows/ci.yml/badge.svg
+[badge-license]: https://img.shields.io/github/license/Be1zebub/silk-icons-browser.svg
+[badge-stars]: https://img.shields.io/github/stars/Be1zebub/silk-icons-browser.svg?style=flat&logo=github

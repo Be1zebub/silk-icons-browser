@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
 import {
@@ -8,7 +9,6 @@ import {
 	rankCounts,
 	UsageCounter,
 } from '../src/lib/core/usage.ts';
-import { Counters } from '../src/worker/counters.ts';
 
 describe('usage counter', () => {
   it('counts copies per icon', () => {
@@ -106,77 +106,10 @@ describe('usage transport', () => {
   });
 });
 
-describe('durable object', () => {
-  /** A Durable Object state backed by a Map. */
-  function memoryState() {
-    const store = new Map();
-
-    return {
-      store,
-      storage: {
-        async get(key) {
-          return store.get(key)
-        },
-        async put(key, value) {
-          store.set(key, value)
-        },
-      },
-    };
-  }
-
-  const post = (body) =>
-    new Request('https://silk.bzbb.dev/api/usage', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-  it('stores the counts', async () => {
-    const state = memoryState();
-    const counters = new Counters(state);
-
-    const response = await counters.fetch(post({ counts: { accept: 2, zoom: 1 } }));
-
-    assert.equal(response.status, 204);
-    assert.deepEqual(state.store.get('counts'), { accept: 2, zoom: 1 });
-  });
-
-  it('adds to the stored counts', async () => {
-    const state = memoryState();
-    const counters = new Counters(state);
-
-    await counters.fetch(post({ counts: { accept: 2 } }));
-    await counters.fetch(post({ counts: { accept: 3 } }));
-
-    assert.equal(state.store.get('counts').accept, 5);
-  });
-
-  it('ignores junk', async () => {
-    const state = memoryState();
-    const counters = new Counters(state);
-
-    await counters.fetch(post({ counts: { accept: 2 } }));
-    await counters.fetch(post({ counts: { '<script>': 5, ok: -1, nan: 'x' } }));
-
-    assert.deepEqual(state.store.get('counts'), { accept: 2 });
-  });
-
-  it('rejects a body without counts', async () => {
-    const counters = new Counters(memoryState());
-    const response = await counters.fetch(post({}));
-
-    assert.equal(response.status, 400);
-  });
-
-  it('answers the ranking, most copied first', async () => {
-    const state = memoryState();
-    const counters = new Counters(state);
-
-    await counters.fetch(post({ counts: { accept: 2, zoom: 7 } }));
-
-    const response = await counters.fetch(new Request('https://silk.bzbb.dev/api/usage'));
-    const body = await response.json();
-
-    assert.deepEqual(body.counts, { zoom: 7, accept: 2 });
+describe('the app stays static', () => {
+  it('ships no worker and no pages function', () => {
+    assert.equal(existsSync(new URL('../src/worker', import.meta.url)), false);
+    assert.equal(existsSync(new URL('../functions', import.meta.url)), false);
+    assert.equal(existsSync(new URL('../wrangler.toml', import.meta.url)), false);
   });
 });
